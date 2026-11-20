@@ -13,7 +13,7 @@ export interface NavItem {
   end?: boolean
   mobile?: boolean // показывать в нижней панели
 }
-export interface NavGroup { title?: string; items: NavItem[] }
+export interface NavGroup { title?: TKey; items: NavItem[] }
 
 const learnerItems: NavItem[] = [
   { to: '/courses', label: 'nav.myCourses', icon: BookOpen, mobile: true },
@@ -33,7 +33,7 @@ export function navFor(role: Role): NavGroup[] {
   }
   if (role === 'manager') {
     return [
-      { title: 'Подразделение', items: [
+      { title: 'nav.groupDepartment', items: [
         { to: '/', label: 'nav.home', icon: Home, end: true, mobile: true },
         { to: '/admin/employees', label: 'nav.employees', icon: Users, mobile: true },
         { to: '/admin/assignments', label: 'nav.assignments', icon: ClipboardList },
@@ -41,7 +41,7 @@ export function navFor(role: Role): NavGroup[] {
         { to: '/admin/competencies', label: 'nav.competencies', icon: Target },
         { to: '/admin/documents', label: 'nav.documents', icon: FileCheck2 },
       ] },
-      { title: 'Моё обучение', items: [...learnerItems.map((i) => ({ ...i, mobile: i.to === '/courses' })),
+      { title: 'nav.groupLearning', items: [...learnerItems.map((i) => ({ ...i, mobile: i.to === '/courses' })),
                                         { to: '/profile', label: 'nav.profile', icon: User }] },
     ]
   }
@@ -60,7 +60,7 @@ export function navFor(role: Role): NavGroup[] {
       { to: '/admin/documents', label: 'nav.documents', icon: FileCheck2 },
       { to: '/admin/settings', label: 'nav.settings', icon: Settings },
     ] },
-    { title: 'Инструменты', items: [
+    { title: 'nav.groupTools', items: [
       { to: '/admin/review', label: 'nav.review', icon: ClipboardCheck },
       { to: '/admin/dialogues', label: 'nav.dialogues', icon: MessagesSquare },
     ] },

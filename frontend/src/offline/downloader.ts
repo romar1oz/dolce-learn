@@ -3,6 +3,9 @@
 import { create } from 'zustand'
 import { api, getAccessToken, refreshSession } from '@/lib/api'
 import { fmtBytes } from '@/lib/utils'
+import { getLocale, translate } from '@/i18n'
+
+const tr = (k: Parameters<typeof translate>[1], p?: Record<string, string | number>) => translate(getLocale(), k, p)
 import { db, type CourseRecord } from './db'
 import { enqueue } from './sync'
 import type { CoursePackage, MediaBrief } from '@/types'
@@ -56,7 +59,7 @@ async function fetchMedia(m: MediaBrief, onChunk: (n: number) => void, signal?: 
     await refreshSession()
     r = await fetch(`/api/materials/${m.id}/file`, { headers: { Authorization: `Bearer ${getAccessToken()}` }, signal })
   }
-  if (!r.ok || !r.body) throw new Error(`Не удалось скачать «${m.title || m.original_name}» (${r.status})`)
+  if (!r.ok || !r.body) throw new Error(tr('dl.errFetch', { name: m.title || m.original_name, status: r.status }))
   // читаем поток, чтобы показывать прогресс, и собираем Blob
   const reader = r.body.getReader()
   const chunks: BlobPart[] = []
@@ -67,7 +70,7 @@ async function fetchMedia(m: MediaBrief, onChunk: (n: number) => void, signal?: 
     onChunk(value.byteLength)
   }
   const blob = new Blob(chunks, { type: m.mime_type })
-  if (blob.size !== m.size_bytes) throw new Error(`Файл «${m.original_name}» скачан не полностью`)
+  if (blob.size !== m.size_bytes) throw new Error(tr('dl.errIncomplete', { name: m.original_name }))
   return new Response(blob, {
     headers: { 'Content-Type': m.mime_type, 'Content-Length': String(blob.size), 'X-Dolce-Saved': new Date().toISOString() },
   })
@@ -80,7 +83,7 @@ export async function downloadCourse(userId: number, courseId: number): Promise<
   const already = await Promise.all(pkg.media.map((m) => isMediaCached(m.id)))
   const needBytes = pkg.media.reduce((s, m, i) => s + (already[i] ? 0 : m.size_bytes), 0)
   if (quota && usage + needBytes > quota * 0.9) {
-    throw new Error(`Недостаточно места на устройстве: нужно ${fmtBytes(needBytes)}, доступно примерно ${fmtBytes(Math.max(0, quota * 0.9 - usage))}. Удалите другие скачанные курсы.`)
+    throw new Error(tr('dl.errSpace', { need: fmtBytes(needBytes), avail: fmtBytes(Math.max(0, quota * 0.9 - usage)) }))
   }
   await requestPersistence()
   const rec: CourseRecord = {
@@ -107,7 +110,7 @@ export async function downloadCourse(userId: number, courseId: number): Promise<
           await cache.put(mediaKey(m.id), resp)
         } catch (e: any) {
           if (e?.name === 'QuotaExceededError') {
-            throw new Error('Браузер не разрешил сохранить файл: закончилось место в хранилище устройства.')
+            throw new Error(tr('dl.errQuota'))
           }
           throw e
         }
@@ -120,7 +123,7 @@ export async function downloadCourse(userId: number, courseId: number): Promise<
     await db.courses.update(key, { status: 'ready', downloadedBytes: pkg.total_bytes, updatedAt: Date.now(), error: null })
     await enqueue('course_download', { course_id: courseId, bytes: pkg.total_bytes, files: pkg.media.length })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Ошибка скачивания'
+    const msg = e instanceof Error ? e.message : tr('dl.errGeneric')
     await db.courses.update(key, { status: 'error', error: msg })
     setProgress({ ...progress, error: msg }, courseId)
     setTimeout(() => setProgress(null, courseId), 8000)

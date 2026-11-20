@@ -12,6 +12,7 @@ import { Badge, Button, Card, ErrorBlock, LoadingBlock, Progress, Textarea } fro
 import { cn, shuffle, uuid } from '@/lib/utils'
 import type { LearnerQuestion, LearnerTest } from '@/types'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useT } from '@/i18n'
 
 interface Draft {
   attemptId: string
@@ -30,6 +31,7 @@ export default function TestTake() {
   const courseParam = Number(sp.get('course')) || undefined
   const navigate = useNavigate()
   const user = useAuth((s) => s.user)!
+  const tr = useT()
   const downloaded = useDownloadedCourse(courseParam)
   const q = useOfflineQuery(['take', testId], () => api.get<LearnerTest>(`/api/tests/${testId}/take`), { staleTime: 0 })
   const fromPkg = downloaded?.pkg.tests.find((t) => t.id === testId)
@@ -75,7 +77,7 @@ export default function TestTake() {
       answers, started_at: draft.startedAt, finished_at: new Date().toISOString(),
     }, { flush: true })
     await db.kv.delete(draftKey)
-    if (auto) toast.info('Время теста истекло — ответы отправлены автоматически')
+    if (auto) toast.info(tr('test.timeUp'))
     navigate(`/attempts/${draft.attemptId}`, { replace: true })
   }
 
@@ -100,7 +102,7 @@ export default function TestTake() {
   }).length : 0, [draft])
 
   if (!restored || (!test && q.isLoading)) return <LoadingBlock />
-  if (!test) return <ErrorBlock error={q.error ?? new Error('Тест недоступен офлайн. Скачайте курс заранее.')} />
+  if (!test) return <ErrorBlock error={q.error ?? new Error(tr('test.unavailable'))} />
 
   const used = test.attempts_used + localPending
   const limitReached = !!test.max_attempts && used >= test.max_attempts
@@ -109,21 +111,21 @@ export default function TestTake() {
   if (!draft) {
     return (
       <div className="mx-auto max-w-xl py-4">
-        <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-muted hover:text-ink">← Назад</button>
+        <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-muted hover:text-ink">← {tr('common.back')}</button>
         <Card className="p-6 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-800"><ListChecks className="h-7 w-7" /></div>
           <h1 className="text-2xl font-bold tracking-tight">{test.title}</h1>
           {test.description && <p className="mt-2 text-muted">{test.description}</p>}
           <div className="mt-5 grid grid-cols-2 gap-3 text-left text-sm">
-            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">Вопросов</p><p className="font-semibold">{total}</p></div>
-            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">Проходной балл</p><p className="font-semibold">{test.pass_score}%</p></div>
-            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">Время</p><p className="font-semibold">{test.time_limit_minutes ? `${test.time_limit_minutes} мин` : 'Без ограничения'}</p></div>
-            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">Попытки</p><p className="font-semibold">{test.max_attempts ? `${used} из ${test.max_attempts}` : `${used} (без лимита)`}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">{tr('test.questions')}</p><p className="font-semibold">{total}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">{tr('test.passScore')}</p><p className="font-semibold">{test.pass_score}%</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">{tr('test.time')}</p><p className="font-semibold">{test.time_limit_minutes ? tr('test.minutes', { n: test.time_limit_minutes }) : tr('test.noLimit')}</p></div>
+            <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs text-muted">{tr('test.attempts')}</p><p className="font-semibold">{test.max_attempts ? tr('test.attemptsOf', { used, max: test.max_attempts }) : tr('test.attemptsUnlimited', { used })}</p></div>
           </div>
-          {test.best_percent != null && <p className="mt-4 text-sm">Лучший результат: <b>{Math.round(test.best_percent)}%</b></p>}
-          {!navigator.onLine && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Вы офлайн. Ответы сохранятся на устройстве, а результат будет рассчитан сервером после синхронизации.</p>}
-          {limitReached ? <p className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">Лимит попыток исчерпан. Обратитесь к методисту.</p>
-            : <Button size="lg" className="mt-6 w-full" onClick={begin} data-testid="begin-test">Начать тест</Button>}
+          {test.best_percent != null && <p className="mt-4 text-sm">{tr('test.best')} <b>{Math.round(test.best_percent)}%</b></p>}
+          {!navigator.onLine && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">{tr('test.offlineNote')}</p>}
+          {limitReached ? <p className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{tr('test.limitReached')}</p>
+            : <Button size="lg" className="mt-6 w-full" onClick={begin} data-testid="begin-test">{tr('test.begin')}</Button>}
         </Card>
       </div>
     )
@@ -139,21 +141,21 @@ export default function TestTake() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-2xl flex-col py-2 lg:min-h-0">
       <div className="mb-5 flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold">Тест</h1>
+        <h1 className="text-lg font-semibold">{tr('test.title')}</h1>
         <div className="flex items-center gap-2">
           {mm && <Badge variant={leftMs! < 60000 ? 'red' : 'outline'} className="py-1"><Clock className="h-3.5 w-3.5" />{mm}</Badge>}
-          <button className="rounded-full border border-line bg-white p-2 hover:bg-slate-50" aria-label="Прервать"
-                  onClick={() => { if (confirm('Прервать тест? Ответы сохранены — можно продолжить позже.')) navigate(-1) }}>
+          <button className="rounded-full border border-line bg-white p-2 hover:bg-slate-50" aria-label={tr('test.abort')}
+                  onClick={() => { if (confirm(tr('test.abortConfirm'))) navigate(-1) }}>
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
       <Progress value={((draft.index + 1) / draft.questions.length) * 100} className="mb-6 h-1.5" />
-      <p className="text-sm font-medium text-muted">Вопрос {draft.index + 1} из {draft.questions.length}</p>
+      <p className="text-sm font-medium text-muted">{tr('test.questionOf', { n: draft.index + 1, total: draft.questions.length })}</p>
       <h2 className="mt-2 text-xl leading-snug font-semibold sm:text-2xl" data-testid="question-text">{current!.text}</h2>
       <p className="mt-1 text-xs text-muted">
-        {current!.type === 'single' ? 'Выберите один вариант' : current!.type === 'multiple' ? 'Выберите все правильные варианты'
-          : current!.type === 'ordering' ? 'Расставьте элементы в правильном порядке' : 'Напишите развёрнутый ответ — его проверит методист'}
+        {current!.type === 'single' ? tr('test.hintSingle') : current!.type === 'multiple' ? tr('test.hintMultiple')
+          : current!.type === 'ordering' ? tr('test.hintOrdering') : tr('test.hintText')}
       </p>
 
       <div className="mt-6 flex-1 space-y-3">
@@ -183,27 +185,27 @@ export default function TestTake() {
             <div key={oid} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-[var(--shadow-soft)]">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-900">{i + 1}</span>
               <span className="flex-1 font-medium">{o.text}</span>
-              <Button size="icon-sm" variant="ghost" disabled={i === 0} onClick={() => move(-1)} aria-label="Выше"><ArrowUp /></Button>
-              <Button size="icon-sm" variant="ghost" disabled={i === a.selected.length - 1} onClick={() => move(1)} aria-label="Ниже"><ArrowDown /></Button>
+              <Button size="icon-sm" variant="ghost" disabled={i === 0} onClick={() => move(-1)} aria-label={tr('test.up')}><ArrowUp /></Button>
+              <Button size="icon-sm" variant="ghost" disabled={i === a.selected.length - 1} onClick={() => move(1)} aria-label={tr('test.down')}><ArrowDown /></Button>
             </div>
           )
         })}
         {current!.type === 'text' && (
-          <Textarea rows={6} placeholder="Ваш ответ" value={a.text ?? ''} onChange={(e) => setAns({ text: e.target.value })} />
+          <Textarea rows={6} placeholder={tr('test.yourAnswer')} value={a.text ?? ''} onChange={(e) => setAns({ text: e.target.value })} />
         )}
       </div>
 
       <div className="safe-bottom sticky bottom-0 mt-6 flex gap-3 bg-page/95 py-3 backdrop-blur">
         <Button variant="outline" size="lg" className="flex-1" disabled={draft.index === 0}
-                onClick={() => setDraft({ ...draft, index: draft.index - 1 })}>Назад</Button>
+                onClick={() => setDraft({ ...draft, index: draft.index - 1 })}>{tr('common.back')}</Button>
         {!isLast ? (
-          <Button size="lg" className="flex-[2]" onClick={() => setDraft({ ...draft, index: draft.index + 1 })} data-testid="next-question">Далее</Button>
+          <Button size="lg" className="flex-[2]" onClick={() => setDraft({ ...draft, index: draft.index + 1 })} data-testid="next-question">{tr('test.next')}</Button>
         ) : (
           <Button size="lg" variant="accent" className="flex-[2]" data-testid="finish-test" onClick={() => {
             const missing = draft.questions.length - answered
-            if (missing > 0 && !confirm(`Без ответа: ${missing}. Завершить тест?`)) return
+            if (missing > 0 && !confirm(tr('test.unanswered', { n: missing }))) return
             void submit()
-          }}>Завершить тест</Button>
+          }}>{tr('test.finish')}</Button>
         )}
       </div>
     </div>

@@ -4,10 +4,12 @@ import { Badge, Button } from '@/components/ui'
 import { cn, uuid } from '@/lib/utils'
 import { enqueue, onSynced } from '@/offline/sync'
 import type { DialoguePackage } from '@/types'
+import { useT } from '@/i18n'
 
 type Step = { nodeId: number; choiceId?: number }
 
 export function DialogueRunner({ scenario }: { scenario: DialoguePackage }) {
+  const t = useT()
   const nodes = useMemo(() => new Map(scenario.nodes.map((n) => [n.id, n])), [scenario])
   const chars = useMemo(() => new Map(scenario.characters.map((c) => [c.id, c])), [scenario])
   const start = scenario.nodes.find((n) => n.is_start) ?? scenario.nodes[0]
@@ -105,14 +107,14 @@ export function DialogueRunner({ scenario }: { scenario: DialoguePackage }) {
         </div>
       ) : (
         <div className="mt-5 rounded-2xl bg-white p-4 text-center shadow-sm">
-          <p className="text-sm text-muted">Результат тренажёра</p>
+          <p className="text-sm text-muted">{t('dlg.result')}</p>
           <p className="text-3xl font-bold">{server ? Math.round(server.percent) : pct}%</p>
           <div className="mt-1 flex justify-center gap-2">
             {(server ? server.passed : pct >= scenario.pass_score)
-              ? <Badge variant="green">Сценарий пройден</Badge> : <Badge variant="red">Нужно повторить</Badge>}
-            {!server && <Badge variant="amber">Ожидает подтверждения сервером</Badge>}
+              ? <Badge variant="green">{t('dlg.passed')}</Badge> : <Badge variant="red">{t('dlg.failed')}</Badge>}
+            {!server && <Badge variant="amber">{t('dlg.pending')}</Badge>}
           </div>
-          <Button variant="outline" className="mt-4" onClick={restart}><RotateCcw />Пройти заново</Button>
+          <Button variant="outline" className="mt-4" onClick={restart}><RotateCcw />{t('dlg.restart')}</Button>
         </div>
       )}
     </div>

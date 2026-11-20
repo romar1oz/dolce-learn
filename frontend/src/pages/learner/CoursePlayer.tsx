@@ -9,12 +9,14 @@ import { enqueue } from '@/offline/sync'
 import { completeLesson, saveLessonLocal } from '@/offline/progress'
 import { useLearningTimer } from '@/offline/tracker'
 import { cn } from '@/lib/utils'
+import { useT } from '@/i18n'
 
 export default function CoursePlayer() {
   const { courseId: cid, lessonId: lid } = useParams()
   const courseId = Number(cid)
   const navigate = useNavigate()
   const user = useAuth((s) => s.user)!
+  const t = useT()
   const { pkg, query } = useCoursePackage(courseId)
   const { lessons, isDone, percent, local } = useCourseProgress(pkg)
   const [menu, setMenu] = useState(false)
@@ -34,8 +36,8 @@ export default function CoursePlayer() {
     setMenu(false)
   }, [lesson?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!pkg) return query.isLoading ? <LoadingBlock /> : <ErrorBlock error={query.error ?? new Error('Курс недоступен офлайн — он не был скачан на устройство.')} />
-  if (!lesson) return lessons.length ? <Navigate to={`/learn/${courseId}/${lessons[0].id}`} replace /> : <ErrorBlock error={new Error('В курсе нет уроков')} />
+  if (!pkg) return query.isLoading ? <LoadingBlock /> : <ErrorBlock error={query.error ?? new Error(t('player.unavailable'))} />
+  if (!lesson) return lessons.length ? <Navigate to={`/learn/${courseId}/${lessons[0].id}`} replace /> : <ErrorBlock error={new Error(t('player.noLessons'))} />
 
   const hasTest = lesson.materials.some((m) => m.kind === 'test')
   const done = isDone(lesson.id)
@@ -54,7 +56,7 @@ export default function CoursePlayer() {
     <div className="space-y-4">
       {pkg.course.modules.map((m, mi) => (
         <div key={m.id}>
-          <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">Модуль {mi + 1}. {m.title}</p>
+          <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">{t('player.moduleN', { n: mi + 1, title: m.title })}</p>
           <div className="space-y-0.5">
             {m.lessons.map((l) => (
               <Link key={l.id} to={`/learn/${courseId}/${l.id}`}
@@ -75,17 +77,17 @@ export default function CoursePlayer() {
     <div className="mx-auto max-w-6xl">
       {/* мобильная шапка урока */}
       <div className="sticky top-0 z-20 -mx-4 mb-4 flex items-center gap-2 border-b border-line bg-page/95 px-3 py-2.5 backdrop-blur sm:-mx-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0">
-        <Link to={`/courses/${courseId}`} className="rounded-full border border-line bg-white p-2 hover:bg-slate-50" aria-label="К курсу"><ArrowLeft className="h-4 w-4" /></Link>
+        <Link to={`/courses/${courseId}`} className="rounded-full border border-line bg-white p-2 hover:bg-slate-50" aria-label={t('player.toCourse')}><ArrowLeft className="h-4 w-4" /></Link>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs text-muted">{pkg.course.title}</p>
           <div className="flex items-center gap-2"><Progress value={percent} className="h-1.5" /><span className="text-xs font-semibold">{percent}%</span></div>
         </div>
-        <Button variant="outline" size="icon" className="rounded-full lg:hidden" onClick={() => setMenu(true)} aria-label="Список уроков"><ListOrdered /></Button>
+        <Button variant="outline" size="icon" className="rounded-full lg:hidden" onClick={() => setMenu(true)} aria-label={t('player.lessons')}><ListOrdered /></Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-wide text-brand-700 uppercase">{moduleOf?.title} · урок {idx + 1} из {lessons.length}</p>
+          <p className="text-xs font-semibold tracking-wide text-brand-700 uppercase">{t('player.lessonOf', { module: moduleOf?.title ?? '', n: idx + 1, total: lessons.length })}</p>
           <h1 className="mt-1 mb-5 text-xl font-bold tracking-tight sm:text-2xl" data-testid="lesson-title">{lesson.title}</h1>
           {lesson.description && <p className="mb-5 text-muted">{lesson.description}</p>}
           <div className="space-y-6">
@@ -93,18 +95,18 @@ export default function CoursePlayer() {
               <MaterialView key={m.id} m={m} pkg={pkg} courseId={courseId} lessonId={lesson.id} userId={user.id}
                             playingRef={playingRef} videoStart={videoStart} />
             ))}
-            {lesson.materials.length === 0 && <p className="text-muted">В уроке пока нет материалов.</p>}
+            {lesson.materials.length === 0 && <p className="text-muted">{t('player.empty')}</p>}
           </div>
 
           <Card className="mt-8 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
-              {done ? <span className="flex items-center gap-1.5 font-medium text-brand-800"><CheckCircle2 className="h-4 w-4" />Урок завершён</span>
-                : hasTest ? <span className="text-muted">Урок засчитывается после успешной сдачи теста</span>
-                : <span className="text-muted">Изучите материалы и переходите дальше</span>}
+              {done ? <span className="flex items-center gap-1.5 font-medium text-brand-800"><CheckCircle2 className="h-4 w-4" />{t('player.done')}</span>
+                : hasTest ? <span className="text-muted">{t('player.testHint')}</span>
+                : <span className="text-muted">{t('player.hint')}</span>}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" disabled={!prev} onClick={() => prev && navigate(`/learn/${courseId}/${prev.id}`)}><ChevronLeft />Назад</Button>
-              <Button onClick={goNext} data-testid="next-lesson">{next ? 'Следующий урок' : 'Завершить'}<ChevronRight /></Button>
+              <Button variant="outline" disabled={!prev} onClick={() => prev && navigate(`/learn/${courseId}/${prev.id}`)}><ChevronLeft />{t('common.back')}</Button>
+              <Button onClick={goNext} data-testid="next-lesson">{next ? t('player.next') : t('player.finish')}<ChevronRight /></Button>
             </div>
           </Card>
         </div>
@@ -119,8 +121,8 @@ export default function CoursePlayer() {
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setMenu(false)} />
           <div className="safe-bottom absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
-              <p className="font-semibold">Уроки курса</p>
-              <button onClick={() => setMenu(false)} className="rounded-lg p-1.5 hover:bg-slate-100" aria-label="Закрыть"><X className="h-5 w-5" /></button>
+              <p className="font-semibold">{t('player.courseLessons')}</p>
+              <button onClick={() => setMenu(false)} className="rounded-lg p-1.5 hover:bg-slate-100" aria-label={t('common.close')}><X className="h-5 w-5" /></button>
             </div>
             <Outline />
           </div>

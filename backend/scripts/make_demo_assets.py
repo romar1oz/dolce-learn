@@ -69,10 +69,8 @@ def cover(name, title, tag, motif):
     else:
         d.ellipse([cx - 110, cy - 110, cx + 110, cy + 110], fill=(255, 255, 255, 235))
         d.ellipse([cx - 45, cy - 45, cx + 45, cy + 45], fill=ACCENT + (255,))
-    d.rounded_rectangle([60, 70, 60 + d.textlength(tag, font=font(26, True)) + 40, 120], 25,
-                        fill=(209, 250, 229, 255))
-    d.text((80, 78), tag, font=font(26, True), fill=DARK)
-    y = 190
+    # метка (tag) не рисуется на обложке: статус «Обязательный» показывается бейджем интерфейса на нужном языке
+    y = 150
     for line in wrap(d, title, font(60, True), 640):
         d.text((60, y), line, font=font(60, True), fill="white")
         y += 74
@@ -118,10 +116,17 @@ def video():
     print("video", dest, dest.stat().st_size)
 
 
+COVERS = [
+    ("cover_safety.png", "Техника безопасности на производстве", "Обязательный", "shield"),
+    ("cover_sop.png", "СОП: вход в чистые помещения", "СОП", "doc"),
+    ("cover_gmp.png", "Основы GMP фармацевтического производства", "Производство", "flask"),
+    ("cover_quality.png", "Документирование и data integrity", "Качество", "circle"),
+    ("cover_service.png", "Коммуникация с внутренним клиентом", "Soft skills", "circle"),
+]
+
 if __name__ == "__main__":
-    cover("cover_safety.png", "Техника безопасности на производстве", "Обязательный", "shield")
-    cover("cover_sop.png", "СОП: вход в чистые помещения", "СОП", "doc")
-    cover("cover_gmp.png", "Основы GMP фармацевтического производства", "Производство", "flask")
-    cover("cover_quality.png", "Документирование и data integrity", "Качество", "circle")
-    cover("cover_service.png", "Коммуникация с внутренним клиентом", "Soft skills", "circle")
+    for args in COVERS:
+        cover(*args)
+    if "--covers-only" in sys.argv:
+        sys.exit(0)
     video()

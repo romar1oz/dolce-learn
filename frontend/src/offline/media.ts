@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { MEDIA_CACHE, mediaKey } from './downloader'
+import { getLocale, translate } from '@/i18n'
 
 const signedCache = new Map<string, { url: string; exp: number }>()
 
@@ -41,7 +42,7 @@ export function useMediaUrl(id?: string | null) {
       })
       .catch((e) => {
         if (!cancelled) setState({ url: null, local: false, loading: false,
-          error: navigator.onLine ? (e?.message || 'Файл недоступен') : 'Файл не скачан на устройство. Подключитесь к сети или скачайте курс.' })
+          error: navigator.onLine ? (e?.message || translate(getLocale(), 'mat.fileUnavailable')) : translate(getLocale(), 'mat.fileNotDownloaded') })
       })
     return () => {
       cancelled = true

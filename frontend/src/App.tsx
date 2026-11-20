@@ -7,6 +7,8 @@ import { LoadingBlock } from '@/components/ui'
 import { LogoMark } from '@/components/Logo'
 import LoginPage from '@/pages/auth/LoginPage'
 import type { Role } from '@/types'
+import { translate, useLocale, useT } from '@/i18n'
+import { useProfileLocale } from '@/components/LanguageSwitcher'
 
 const LearnerHome = lazy(() => import('@/pages/learner/LearnerHome'))
 const MyCourses = lazy(() => import('@/pages/learner/MyCourses'))
@@ -49,7 +51,7 @@ function Splash() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-page">
       <LogoMark className="h-14 w-14 animate-pulse" />
-      <p className="text-sm text-muted">Dolce Learn загружается…</p>
+      <p className="text-sm text-muted">{translate(useLocale.getState().locale, 'common.appLoading')}</p>
     </div>
   )
 }
@@ -57,14 +59,15 @@ function Splash() {
 function Guard({ roles, children }: { roles?: Role[]; children: React.ReactNode }) {
   const { status, user } = useAuth()
   const loc = useLocation()
+  const t = useT()
   if (status === 'loading') return <Splash />
   if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname }} />
   if (roles && !roles.includes(user.role)) {
     return (
       <div className="mx-auto max-w-md py-20 text-center">
         <p className="text-5xl font-bold text-brand-900">403</p>
-        <p className="mt-2 font-semibold">Раздел недоступен для вашей роли</p>
-        <a href="/" className="mt-4 inline-block text-sm font-semibold text-brand-800 underline">На главную</a>
+        <p className="mt-2 font-semibold">{t('common.forbidden')}</p>
+        <a href="/" className="mt-4 inline-block text-sm font-semibold text-brand-800 underline">{t('common.toHome')}</a>
       </div>
     )
   }
@@ -79,6 +82,8 @@ function Home() {
 export default function App() {
   const { bootstrap, status, user, tryReconnect } = useAuth()
   const online = useSync((s) => s.online)
+  const t = useT()
+  useProfileLocale()
 
   useEffect(() => {
     void bootstrap()
@@ -138,7 +143,7 @@ export default function App() {
           <Route path="admin/review" element={g(<ReviewPage />, STAFF)} />
           <Route path="admin/dialogues" element={g(<Dialogues />, STAFF)} />
           <Route path="admin/dialogues/:id" element={g(<DialogueEditor />, STAFF)} />
-          <Route path="*" element={<div className="py-20 text-center"><p className="text-5xl font-bold text-brand-900">404</p><p className="mt-2 text-muted">Страница не найдена</p></div>} />
+          <Route path="*" element={<div className="py-20 text-center"><p className="text-5xl font-bold text-brand-900">404</p><p className="mt-2 text-muted">{t('common.notFound')}</p></div>} />
         </Route>
       </Routes>
     </Suspense>

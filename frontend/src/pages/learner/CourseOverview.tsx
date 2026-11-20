@@ -3,7 +3,8 @@ import { ArrowLeft, BookOpen, CheckCircle2, Clock, FileText, ListChecks, Message
 import { Badge, Button, Card, ErrorBlock, LoadingBlock, Progress } from '@/components/ui'
 import { CoverImage, DeadlineBadge, DownloadButton, OfflineCopyNotice, StatusBadge, useCoursePackage, useCourseProgress } from '@/features/learning'
 import { RichText } from '@/components/RichText'
-import { cn, fmtMinutes, LEVELS, plural } from '@/lib/utils'
+import { cn, fmtMinutes } from '@/lib/utils'
+import { useT, type TKey } from '@/i18n'
 import { enqueue } from '@/offline/sync'
 import type { Lesson } from '@/types'
 
@@ -20,12 +21,13 @@ export default function CourseOverview() {
   const { id } = useParams()
   const courseId = Number(id)
   const navigate = useNavigate()
+  const t = useT()
   const { pkg, query, isOfflineCopy, downloaded } = useCoursePackage(courseId)
   const { lessons, isDone, done, percent } = useCourseProgress(pkg)
 
   if (!pkg) {
     if (query.isLoading) return <LoadingBlock />
-    return <ErrorBlock error={query.error ?? new Error(navigator.onLine ? 'Курс не найден' : 'Курс не скачан на устройство. Подключитесь к сети.')} />
+    return <ErrorBlock error={query.error ?? new Error(navigator.onLine ? t('course.notFound') : t('course.unavailable'))} />
   }
   const c = pkg.course
   const nextLesson = lessons.find((l) => !isDone(l.id)) ?? lessons[0]
@@ -37,7 +39,7 @@ export default function CourseOverview() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"><ArrowLeft className="h-4 w-4" />Назад</button>
+      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"><ArrowLeft className="h-4 w-4" />{t('common.back')}</button>
       <OfflineCopyNotice show={isOfflineCopy && !downloaded} cachedAt={query.data?.cachedAt} />
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="space-y-5">
@@ -45,7 +47,7 @@ export default function CourseOverview() {
             <CoverImage mediaId={c.cover_media_id} title={c.title} className="aspect-[16/8]" />
             <div className="p-5">
               <div className="flex flex-wrap gap-1.5">
-                {c.is_mandatory && <Badge variant="dark">Обязательный</Badge>}
+                {c.is_mandatory && <Badge variant="dark">{t('badge.mandatory')}</Badge>}
                 {c.category_name && <Badge variant="green">{c.category_name}</Badge>}
                 {status && <StatusBadge status={status} />}
                 <DeadlineBadge due={pkg.assignment?.due_date} status={status} />
@@ -53,10 +55,10 @@ export default function CourseOverview() {
               <h1 className="mt-3 text-2xl font-bold tracking-tight">{c.title}</h1>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted">
                 {c.author_name && <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{c.author_name}</span>}
-                <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />{lessons.length} {plural(lessons.length, 'урок', 'урока', 'уроков')}</span>
+                <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" />{t.n('pl.lesson', lessons.length)}</span>
                 <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{fmtMinutes(c.duration_minutes)}</span>
-                <span className="flex items-center gap-1.5"><Signal className="h-4 w-4" />{LEVELS[c.level]}</span>
-                <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4" />Проходной балл {c.pass_score}%</span>
+                <span className="flex items-center gap-1.5"><Signal className="h-4 w-4" />{t(`level.${c.level}` as TKey)}</span>
+                <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4" />{t('course.passScore', { n: c.pass_score })}</span>
               </div>
               <div className="mt-4 flex items-center gap-3">
                 <Progress value={percent} className="h-2.5" />
@@ -69,25 +71,25 @@ export default function CourseOverview() {
 
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <Card className="bg-gradient-to-br from-brand-900 to-brand-800 p-5 text-white">
-            <p className="text-sm text-brand-100/80">{done ? `Пройдено уроков: ${done} из ${lessons.length}` : 'Курс ещё не начат'}</p>
+            <p className="text-sm text-brand-100/80">{done ? t('course.lessonsDone', { done, total: lessons.length }) : t('course.notStarted')}</p>
             <p className="mt-1 truncate text-lg font-semibold">{nextLesson?.title}</p>
             <Button size="lg" className="mt-4 w-full bg-white text-brand-900 hover:bg-brand-50" onClick={start} data-testid="start-course">
-              <PlayCircle />{done ? (done === lessons.length ? 'Повторить курс' : 'Продолжить обучение') : 'Начать курс'}
+              <PlayCircle />{done ? (done === lessons.length ? t('course.repeat') : t('course.continue')) : t('course.start')}
             </Button>
           </Card>
           <Card className="p-4">
-            <p className="mb-1 text-sm font-semibold">Офлайн-доступ</p>
-            <p className="mb-3 text-xs text-muted">Скачайте курс — видео, документы и тесты будут доступны без интернета. Результаты отправятся автоматически при появлении сети.</p>
+            <p className="mb-1 text-sm font-semibold">{t('course.offlineTitle')}</p>
+            <p className="mb-3 text-xs text-muted">{t('course.offlineText')}</p>
             <DownloadButton courseId={courseId} totalBytes={pkg.total_bytes} />
           </Card>
         </div>
       </div>
 
-      <h2 className="mt-8 mb-4 text-lg font-semibold">Программа курса</h2>
+      <h2 className="mt-8 mb-4 text-lg font-semibold">{t('course.program')}</h2>
       <div className="space-y-5">
         {c.modules.map((m, mi) => (
           <Card key={m.id} className="p-4 sm:p-5">
-            <p className="text-xs font-semibold tracking-wide text-brand-700 uppercase">Модуль {mi + 1}</p>
+            <p className="text-xs font-semibold tracking-wide text-brand-700 uppercase">{t('course.module', { n: mi + 1 })}</p>
             <h3 className="font-semibold">{m.title}</h3>
             <ol className="relative mt-4 space-y-1 before:absolute before:top-4 before:bottom-4 before:left-[19px] before:w-0.5 before:bg-brand-100">
               {m.lessons.map((l) => {
@@ -103,9 +105,9 @@ export default function CourseOverview() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className={cn('block truncate text-sm font-medium', !finished && !current && 'text-slate-600')}>{l.title}</span>
-                        <span className="text-xs text-muted">{l.duration_minutes ? fmtMinutes(l.duration_minutes) : `${l.materials.length} элем.`}</span>
+                        <span className="text-xs text-muted">{l.duration_minutes ? fmtMinutes(l.duration_minutes) : t('course.items', { n: l.materials.length })}</span>
                       </span>
-                      {current && <Badge variant="green">Далее</Badge>}
+                      {current && <Badge variant="green">{t('course.next')}</Badge>}
                     </Link>
                   </li>
                 )

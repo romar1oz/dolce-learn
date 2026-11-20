@@ -9,6 +9,9 @@ import { api, getAccessToken, NetworkError, refreshSession, ApiError } from '@/l
 import { uuid } from '@/lib/utils'
 import { db, type QueueItem } from './db'
 import type { AttemptResult } from '@/types'
+import { getLocale, translate } from '@/i18n'
+
+const tr = (k: Parameters<typeof translate>[1], p?: Record<string, string | number>) => translate(getLocale(), k, p)
 
 const BATCH = 100
 const BACKOFF = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000]
@@ -151,10 +154,10 @@ async function doFlush(): Promise<SyncReport> {
           await db.queue.bulkUpdate(batch.map((i) => ({
             key: i.id,
             changes: { status: 'pending' as const, tries: i.tries + 1, nextTryAt: Date.now() + delay(i),
-                       error: e instanceof Error ? e.message : 'Ошибка' },
+                       error: e instanceof Error ? e.message : tr('sync.err') },
           })))
           if (e instanceof NetworkError) report.networkError = true
-          useSync.setState({ lastError: e instanceof ApiError || e instanceof NetworkError ? e.message : 'Ошибка синхронизации' })
+          useSync.setState({ lastError: e instanceof ApiError || e instanceof NetworkError ? e.message : tr('sync.err') })
           break
         }
         report.sent += batch.length
@@ -165,7 +168,7 @@ async function doFlush(): Promise<SyncReport> {
           const okStatus = r.status === 'applied' || (r.status === 'duplicate' && r.original_status !== 'rejected')
           const changes: Partial<QueueItem> = okStatus
             ? { status: 'synced', result: r.result ?? null, syncedAt: Date.now(), error: null }
-            : { status: 'failed', error: r.error || 'Событие отклонено сервером', syncedAt: Date.now() }
+            : { status: 'failed', error: r.error || tr('sync.rejectedEvent'), syncedAt: Date.now() }
           await db.queue.update(item.id, changes)
           if (okStatus) report.applied++
           else report.rejected++
@@ -180,7 +183,7 @@ async function doFlush(): Promise<SyncReport> {
     if (!report.networkError) {
       const ts = Date.now()
       try { localStorage.setItem('dolce-last-sync', String(ts)) } catch { /* empty */ }
-      useSync.setState({ lastSyncAt: ts, lastError: report.rejected ? `Отклонено событий: ${report.rejected}` : null })
+      useSync.setState({ lastSyncAt: ts, lastError: report.rejected ? tr('sync.rejectedCount', { n: report.rejected }) : null })
     }
   } finally {
     useSync.setState({ syncing: false })
@@ -197,7 +200,7 @@ async function afterApplied(item: QueueItem) {
       await db.attempts.update(attemptId, { status: res.status === 'rejected' ? 'rejected' : 'synced', result: res,
                                             error: res.rejection_reason ?? null })
     } else if (item.status === 'failed') {
-      await db.attempts.update(attemptId, { status: 'rejected', error: item.error ?? 'Отклонено' })
+      await db.attempts.update(attemptId, { status: 'rejected', error: item.error ?? tr('sync.rejectedEvent') })
     }
   }
 }

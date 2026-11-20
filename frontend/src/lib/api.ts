@@ -1,6 +1,7 @@
 /* HTTP-клиент: access-токен хранится только в памяти, refresh-токен — в httpOnly cookie.
    При 401 выполняется одно обновление токена (single-flight) и повтор запроса. */
 import type { TokenResponse } from '@/types'
+import { getLocale, translate } from '@/i18n'
 
 export class ApiError extends Error {
   status: number
@@ -14,8 +15,8 @@ export class ApiError extends Error {
 
 /** Ошибка сети: сервер недоступен (нет интернета, сервер выключен). */
 export class NetworkError extends Error {
-  constructor(message = 'Нет соединения с сервером') {
-    super(message)
+  constructor(message?: string) {
+    super(message ?? translate(getLocale(), 'net.noConnection'))
   }
 }
 

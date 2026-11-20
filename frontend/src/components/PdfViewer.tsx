@@ -4,6 +4,7 @@ import * as pdfjs from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import { Button, Spinner } from '@/components/ui'
+import { useT } from '@/i18n'
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -12,13 +13,14 @@ export function PdfViewer({ url, onFullyViewed }: { url: string; onFullyViewed?:
   const [doc, setDoc] = useState<pdfjs.PDFDocumentProxy | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
+  const t = useT()
 
   useEffect(() => {
     let cancelled = false
     setDoc(null)
     setError(null)
     const task = pdfjs.getDocument({ url })
-    task.promise.then((d) => !cancelled && setDoc(d)).catch((e) => !cancelled && setError(e?.message || 'Не удалось открыть PDF'))
+    task.promise.then((d) => !cancelled && setDoc(d)).catch((e) => !cancelled && setError(e?.message || 'PDF error'))
     return () => {
       cancelled = true
       void task.destroy()
@@ -60,14 +62,14 @@ export function PdfViewer({ url, onFullyViewed }: { url: string; onFullyViewed?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, scale])
 
-  if (error) return <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>
+  if (error) return <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{t('mat.pdfError')}: {error}</p>
   return (
     <div className="rounded-2xl border border-line bg-slate-100">
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2 text-xs text-muted">
-        <span>{doc ? `${doc.numPages} стр.` : 'Загрузка…'}</span>
+        <span>{doc ? t('mat.pages', { n: doc.numPages }) : t('common.loading')}</span>
         <div className="flex gap-1">
-          <Button size="icon-sm" variant="ghost" onClick={() => setScale((s) => Math.max(0.6, s - 0.2))} aria-label="Уменьшить"><ZoomOut /></Button>
-          <Button size="icon-sm" variant="ghost" onClick={() => setScale((s) => Math.min(2.4, s + 0.2))} aria-label="Увеличить"><ZoomIn /></Button>
+          <Button size="icon-sm" variant="ghost" onClick={() => setScale((s) => Math.max(0.6, s - 0.2))} aria-label={t('mat.zoomOut')}><ZoomOut /></Button>
+          <Button size="icon-sm" variant="ghost" onClick={() => setScale((s) => Math.min(2.4, s + 0.2))} aria-label={t('mat.zoomIn')}><ZoomIn /></Button>
         </div>
       </div>
       <div className="max-h-[75vh] overflow-auto p-3" data-testid="pdf-pages">

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { getLocale, intlLocale, translate, type TKey } from '@/i18n'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -14,57 +15,66 @@ export function uuid(): string {
   })
 }
 
-const dateFmt = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-const dateTimeFmt = new Intl.DateTimeFormat('ru-RU', {
-  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-})
-const shortFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
+// Форматирование учитывает выбранный язык интерфейса
+const fmtCache = new Map<string, Intl.DateTimeFormat>()
+function dtf(kind: 'date' | 'datetime' | 'short') {
+  const loc = intlLocale()
+  const key = `${loc}:${kind}`
+  if (!fmtCache.has(key)) {
+    const opts: Intl.DateTimeFormatOptions = kind === 'date' ? { day: '2-digit', month: '2-digit', year: 'numeric' }
+      : kind === 'datetime' ? { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+      : { day: 'numeric', month: 'short' }
+    fmtCache.set(key, new Intl.DateTimeFormat(loc, opts))
+  }
+  return fmtCache.get(key)!
+}
+const tr = (k: TKey, p?: Record<string, string | number>) => translate(getLocale(), k, p)
 
 export function fmtDate(v?: string | null | Date): string {
   if (!v) return '—'
   const d = typeof v === 'string' ? new Date(v.length === 10 ? v + 'T00:00:00' : v) : v
-  return isNaN(+d) ? '—' : dateFmt.format(d)
+  return isNaN(+d) ? '—' : dtf('date').format(d)
 }
 
 export function fmtDateTime(v?: string | null | Date): string {
   if (!v) return '—'
   const d = typeof v === 'string' ? new Date(v) : v
-  return isNaN(+d) ? '—' : dateTimeFmt.format(d)
+  return isNaN(+d) ? '—' : dtf('datetime').format(d)
 }
 
 export function fmtShort(v?: string | null): string {
   if (!v) return '—'
   const d = new Date(v.length === 10 ? v + 'T00:00:00' : v)
-  return isNaN(+d) ? '—' : shortFmt.format(d)
+  return isNaN(+d) ? '—' : dtf('short').format(d)
 }
 
 export function fmtRelative(v?: string | number | null): string {
-  if (!v) return 'никогда'
+  if (!v) return tr('rel.never')
   const t = typeof v === 'number' ? v : new Date(v).getTime()
   const s = Math.round((Date.now() - t) / 1000)
-  if (s < 45) return 'только что'
-  if (s < 3600) return `${Math.round(s / 60)} мин назад`
-  if (s < 86400) return `${Math.round(s / 3600)} ч назад`
+  if (s < 45) return tr('rel.justNow')
+  if (s < 3600) return tr('rel.minAgo', { n: Math.round(s / 60) })
+  if (s < 86400) return tr('rel.hAgo', { n: Math.round(s / 3600) })
   return fmtDateTime(new Date(t))
 }
 
 export function fmtBytes(n?: number | null): string {
   if (!n && n !== 0) return '—'
-  if (n < 1024) return `${n} Б`
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} КБ`
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} МБ`
-  return `${(n / 1024 ** 3).toFixed(2)} ГБ`
+  if (n < 1024) return `${n} ${tr('unit.b')}`
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} ${tr('unit.kb')}`
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} ${tr('unit.mb')}`
+  return `${(n / 1024 ** 3).toFixed(2)} ${tr('unit.gb')}`
 }
 
 export function fmtDuration(sec?: number | null): string {
-  if (!sec) return '0 мин'
+  if (!sec) return `0 ${tr('unit.min')}`
   const h = Math.floor(sec / 3600)
   const m = Math.round((sec % 3600) / 60)
-  return h ? `${h} ч ${m} мин` : `${m} мин`
+  return h ? `${h} ${tr('unit.h')} ${m} ${tr('unit.min')}` : `${m} ${tr('unit.min')}`
 }
 
 export function fmtMinutes(min?: number | null): string {
-  if (!min) return '0 мин'
+  if (!min) return `0 ${tr('unit.min')}`
   return fmtDuration(min * 60)
 }
 

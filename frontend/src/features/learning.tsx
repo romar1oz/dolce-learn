@@ -7,7 +7,8 @@ import { useDownloadedCourse, useOfflineQuery, useLocalLessons } from '@/hooks/u
 import { downloadCourse, refreshCoursePackage, removeCourse, useDownloads } from '@/offline/downloader'
 import { useMediaUrl } from '@/offline/media'
 import { useAuth } from '@/stores/auth'
-import { ASSIGN_STATUS, cn, daysUntil, fmtBytes, fmtDate, fmtMinutes, plural } from '@/lib/utils'
+import { cn, daysUntil, fmtBytes, fmtDate, fmtDateTime, fmtMinutes } from '@/lib/utils'
+import { useT, type TKey } from '@/i18n'
 import { Badge, Button, Progress } from '@/components/ui'
 import type { CoursePackage, CourseSummary } from '@/types'
 
@@ -22,22 +23,27 @@ export function CoverImage({ mediaId, className, title }: { mediaId?: string | n
 }
 
 export function StatusBadge({ status, overdue }: { status?: string | null; overdue?: boolean }) {
-  if (overdue) return <Badge variant="red">Просрочен</Badge>
+  const t = useT()
+  if (overdue) return <Badge variant="red">{t('status.overdue')}</Badge>
   if (!status) return null
   const v = status === 'completed' ? 'green' : status === 'in_progress' ? 'blue' : 'default'
-  return <Badge variant={v as any}>{ASSIGN_STATUS[status] || status}</Badge>
+  const known = ['assigned', 'in_progress', 'completed', 'overdue'].includes(status)
+  return <Badge variant={v as any}>{known ? t(`status.${status}` as TKey) : status}</Badge>
 }
 
 export function DeadlineBadge({ due, status }: { due?: string | null; status?: string | null }) {
+  const t = useT()
   const d = daysUntil(due)
   if (d === null || status === 'completed') return null
-  if (d < 0) return <Badge variant="red">Просрочен на {-d} {plural(-d, 'день', 'дня', 'дней')}</Badge>
-  if (d <= 3) return <Badge variant="amber">Осталось {d} {plural(d, 'день', 'дня', 'дней')}</Badge>
-  return <Badge variant="outline">до {fmtDate(due)}</Badge>
+  const days = (n: number) => t.n('pl.day', n).replace(/^\d+ /, '')
+  if (d < 0) return <Badge variant="red">{t('deadline.overdueBy', { n: -d, days: days(-d) })}</Badge>
+  if (d <= 3) return <Badge variant="amber">{t('deadline.left', { n: d, days: days(d) })}</Badge>
+  return <Badge variant="outline">{t('deadline.until', { date: fmtDate(due) })}</Badge>
 }
 
 export function CourseCard({ c, to }: { c: CourseSummary & { assignment?: any }; to?: string }) {
   const uid = useAuth((s) => s.user?.id)
+  const t = useT()
   const dl = useDownloadedCourse(c.id)
   const status = c.assignment?.status ?? c.assignment_status
   const progress = c.assignment?.progress_percent ?? c.progress_percent ?? 0
@@ -47,16 +53,16 @@ export function CourseCard({ c, to }: { c: CourseSummary & { assignment?: any };
       <div className="relative">
         <CoverImage mediaId={c.cover_media_id} title={c.title} className="aspect-[16/9]" />
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          {c.is_mandatory && <Badge variant="dark">Обязательный</Badge>}
-          {dl?.status === 'ready' && uid && <Badge variant="green"><CloudDownload className="h-3 w-3" />Офлайн</Badge>}
+          {c.is_mandatory && <Badge variant="dark">{t('badge.mandatory')}</Badge>}
+          {dl?.status === 'ready' && uid && <Badge variant="green"><CloudDownload className="h-3 w-3" />{t('badge.offline')}</Badge>}
         </div>
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium text-brand-800">{c.category_name || 'Курс'}</p>
+        <p className="text-xs font-medium text-brand-800">{c.category_name || t('common.course')}</p>
         <h3 className="mt-1 line-clamp-2 font-semibold leading-snug">{c.title}</h3>
         {c.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{c.description}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-          <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{c.lesson_count} {plural(c.lesson_count, 'урок', 'урока', 'уроков')}</span>
+          <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{t.n('pl.lesson', c.lesson_count)}</span>
           <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{fmtMinutes(c.duration_minutes)}</span>
         </div>
         <div className="mt-auto pt-4">
@@ -69,7 +75,7 @@ export function CourseCard({ c, to }: { c: CourseSummary & { assignment?: any };
               <Progress value={progress} />
               <div className="mt-2"><DeadlineBadge due={due} status={status} /></div>
             </>
-          ) : <Badge variant="outline">Доступен для изучения</Badge>}
+          ) : <Badge variant="outline">{t('badge.availableToStudy')}</Badge>}
         </div>
       </div>
     </Link>
@@ -110,13 +116,14 @@ export function DownloadButton({ courseId, totalBytes, size = 'default' }: { cou
   const uid = useAuth((s) => s.user?.id)
   const dl = useDownloadedCourse(courseId)
   const active = useDownloads((s) => s.active[courseId])
+  const t = useT()
   if (!uid) return null
   if (active && !active.error) {
     const pct = active.total ? Math.round((100 * active.loaded) / active.total) : 0
     return (
       <div className="w-full min-w-[220px] rounded-xl border border-brand-200 bg-brand-50 p-3" data-testid="download-progress">
         <div className="flex items-center justify-between text-xs font-medium text-brand-900">
-          <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Скачивание… {pct}%</span>
+          <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('dl.downloading', { pct })}</span>
           <span>{fmtBytes(active.loaded)} / {fmtBytes(active.total)}</span>
         </div>
         <Progress value={pct} className="mt-2 bg-white" />
@@ -127,12 +134,12 @@ export function DownloadButton({ courseId, totalBytes, size = 'default' }: { cou
   if (dl?.status === 'ready') {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="green" className="py-1.5"><CheckCircle2 className="h-3.5 w-3.5" />Доступен офлайн · {fmtBytes(dl.totalBytes)}</Badge>
+        <Badge variant="green" className="py-1.5"><CheckCircle2 className="h-3.5 w-3.5" />{t('dl.ready', { size: fmtBytes(dl.totalBytes) })}</Badge>
         <Button size="sm" variant="ghost" onClick={async () => {
-          if (!confirm('Удалить скачанные материалы курса с устройства? Прогресс обучения сохранится.')) return
+          if (!confirm(t('dl.removeConfirm'))) return
           await removeCourse(uid, courseId)
-          toast.success('Материалы курса удалены с устройства')
-        }}><Trash2 />Удалить с устройства</Button>
+          toast.success(t('dl.removed'))
+        }}><Trash2 />{t('dl.remove')}</Button>
       </div>
     )
   }
@@ -141,22 +148,23 @@ export function DownloadButton({ courseId, totalBytes, size = 'default' }: { cou
             onClick={async () => {
               try {
                 await downloadCourse(uid, courseId)
-                toast.success('Курс скачан и доступен без интернета')
+                toast.success(t('dl.done'))
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : 'Не удалось скачать курс')
+                toast.error(e instanceof Error ? e.message : t('dl.failed'))
               }
             }}>
-      <Download />{dl?.status === 'partial' || dl?.status === 'error' ? 'Докачать для офлайн-доступа' : 'Скачать для офлайн-доступа'}
+      <Download />{dl?.status === 'partial' || dl?.status === 'error' ? t('dl.resume') : t('dl.download')}
       {totalBytes ? <span className="font-normal opacity-70">· {fmtBytes(totalBytes)}</span> : null}
     </Button>
   )
 }
 
 export function OfflineCopyNotice({ show, cachedAt }: { show: boolean; cachedAt?: number | null }) {
+  const t = useT()
   if (!show) return null
   return (
     <div className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-      Нет связи с сервером — показаны сохранённые на устройстве данные{cachedAt ? ` от ${new Date(cachedAt).toLocaleString('ru-RU')}` : ''}.
+      {t('common.offlineData', { date: cachedAt ? t('common.offlineDataDate', { date: fmtDateTime(new Date(cachedAt)) }) : '' })}
     </div>
   )
 }

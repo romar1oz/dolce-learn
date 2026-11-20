@@ -11,12 +11,14 @@ import { saveSingleMedia } from '@/offline/downloader'
 import { db } from '@/offline/db'
 import { fmtBytes, fmtDate } from '@/lib/utils'
 import type { Category } from '@/types'
+import { useT } from '@/i18n'
 
 const ICONS: Record<string, any> = { pdf: FileText, word: FileText, excel: FileSpreadsheet, powerpoint: Presentation, video: Video, image: Image }
 
 export default function LibraryPage() {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('')
+  const t = useT()
   const items = useOfflineQuery(['library'], () => api.get<{ items: any[] }>('/api/library', { page_size: 500 }))
   const cats = useOfflineQuery(['categories', 'library'], () => api.get<Category[]>('/api/categories', { kind: 'library' }))
   const saved = useLiveQuery(async () => new Set((await db.media.toArray()).map((m) => m.id)), []) ?? new Set<string>()
@@ -25,21 +27,21 @@ export default function LibraryPage() {
 
   return (
     <div>
-      <PageHeader title="Библиотека" subtitle="Инструкции, СОП, нормативные документы и шаблоны" />
+      <PageHeader title={t('nav.library')} subtitle={t('lib.subtitle')} />
       <OfflineCopyNotice show={!!items.data?.cachedAt} cachedAt={items.data?.cachedAt} />
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input className="pl-9" placeholder="Поиск по названию и описанию" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input className="pl-9" placeholder={t('lib.search')} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <Select className="sm:w-60" value={cat} onChange={(e) => setCat(e.target.value)}>
-          <option value="">Все категории</option>
+          <option value="">{t('common.allCategories')}</option>
           {(cats.data?.data || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
       </div>
       {items.error && !items.data ? <ErrorBlock error={items.error} />
         : items.isLoading ? <Skeleton className="h-60" />
-        : list.length === 0 ? <EmptyState icon={FolderOpen} title="Материалы не найдены" />
+        : list.length === 0 ? <EmptyState icon={FolderOpen} title={t('lib.empty')} />
         : (
           <div className="grid gap-3 md:grid-cols-2">
             {list.map((i) => {
@@ -62,15 +64,15 @@ export default function LibraryPage() {
                           <Button size="sm" onClick={() => {
                             void api.post(`/api/library/${i.id}/opened`).catch(() => {})
                             openMedia(i.media.id, i.media.original_name).catch((e) => toast.error(e.message))
-                          }}>Открыть</Button>
-                          {isSaved ? <Badge variant="green" className="py-1"><CheckCircle2 className="h-3 w-3" />На устройстве</Badge>
+                          }}>{t('common.open')}</Button>
+                          {isSaved ? <Badge variant="green" className="py-1"><CheckCircle2 className="h-3 w-3" />{t('lib.onDevice')}</Badge>
                             : <Button size="sm" variant="outline" disabled={!navigator.onLine} onClick={async () => {
-                              try { await saveSingleMedia(i.media, `library:${i.id}`); toast.success('Сохранено для офлайн-доступа') }
+                              try { await saveSingleMedia(i.media, `library:${i.id}`); toast.success(t('lib.saved')) }
                               catch (e: any) { toast.error(e.message) }
-                            }}><CloudDownload />Сохранить офлайн</Button>}
+                            }}><CloudDownload />{t('lib.saveOffline')}</Button>}
                         </>
                       ) : (
-                        <Button size="sm" variant="outline" asChild><a href={i.url} target="_blank" rel="noopener noreferrer"><ExternalLink />Перейти</a></Button>
+                        <Button size="sm" variant="outline" asChild><a href={i.url} target="_blank" rel="noopener noreferrer"><ExternalLink />{t('lib.go')}</a></Button>
                       )}
                     </div>
                   </div>

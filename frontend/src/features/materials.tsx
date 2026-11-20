@@ -11,11 +11,13 @@ import { saveLessonLocal } from '@/offline/progress'
 import { fmtBytes } from '@/lib/utils'
 import { DialogueRunner } from '@/features/dialogue'
 import type { CoursePackage, Material } from '@/types'
+import { useT, type TKey } from '@/i18n'
 
 export function VideoBlock({ m, courseId, lessonId, userId, playingRef, startAt }: {
   m: Material; courseId: number; lessonId: number; userId: number; playingRef: React.MutableRefObject<boolean>; startAt?: number
 }) {
   const { url, local, error, loading } = useMediaUrl(m.media_id)
+  const t = useT()
   const ref = useRef<HTMLVideoElement>(null)
   const lastSent = useRef(0)
   const resumed = useRef(false)
@@ -34,7 +36,7 @@ export function VideoBlock({ m, courseId, lessonId, userId, playingRef, startAt 
   if (loading) return <div className="flex aspect-video items-center justify-center rounded-2xl bg-slate-900"><Spinner className="text-white" /></div>
   if (error || !url) return (
     <div className="flex aspect-video flex-col items-center justify-center gap-2 rounded-2xl bg-slate-900 p-6 text-center text-sm text-slate-200">
-      <CloudOff className="h-8 w-8 text-amber-300" />{error || 'Видео недоступно'}
+      <CloudOff className="h-8 w-8 text-amber-300" />{error || t('mat.videoUnavailable')}
     </div>
   )
   return (
@@ -49,7 +51,7 @@ export function VideoBlock({ m, courseId, lessonId, userId, playingRef, startAt 
              onEnded={() => { playingRef.current = false; report(true) }}
              onTimeUpdate={() => { if (Date.now() - lastSent.current > 15_000 && playingRef.current) report() }} />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-        {local ? <Badge variant="green">Воспроизводится с устройства</Badge> : <Badge variant="outline">Потоковое воспроизведение</Badge>}
+        {local ? <Badge variant="green">{t('mat.fromDevice')}</Badge> : <Badge variant="outline">{t('mat.streaming')}</Badge>}
         {m.media?.size_bytes ? <span>{fmtBytes(m.media.size_bytes)}</span> : null}
       </div>
     </div>
@@ -58,13 +60,14 @@ export function VideoBlock({ m, courseId, lessonId, userId, playingRef, startAt 
 
 function PdfBlock({ m }: { m: Material }) {
   const { url, error, loading } = useMediaUrl(m.media_id)
+  const t = useT()
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>
   if (error || !url) return <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{error}</p>
   return (
     <div className="space-y-2">
       <PdfViewer url={url} />
       <Button size="sm" variant="outline" onClick={() => openMedia(m.media_id!, m.media?.original_name || 'document.pdf', true).catch((e) => toast.error(e.message))}>
-        <Download />Скачать PDF
+        <Download />{t('mat.downloadPdf')}
       </Button>
     </div>
   )
@@ -77,29 +80,30 @@ function ImageBlock({ m }: { m: Material }) {
 }
 
 const FILE_ICONS: Record<string, any> = { word: FileText, excel: FileSpreadsheet, powerpoint: Presentation, file: FileIcon }
-const FILE_LABEL: Record<string, string> = { word: 'Документ Word', excel: 'Таблица Excel', powerpoint: 'Презентация PowerPoint', file: 'Файл' }
 
 function FileBlock({ m }: { m: Material }) {
   const Icon = FILE_ICONS[m.kind] || FileIcon
+  const t = useT()
   const [busy, setBusy] = useState(false)
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4">
       <div className="rounded-xl bg-brand-50 p-3 text-brand-800"><Icon className="h-6 w-6" /></div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{m.title || m.media?.original_name}</p>
-        <p className="text-xs text-muted">{FILE_LABEL[m.kind]} · {m.media?.original_name} · {fmtBytes(m.media?.size_bytes)}</p>
+        <p className="text-xs text-muted"> {t((['word', 'excel', 'powerpoint'].includes(m.kind) ? `mat.${m.kind}` : 'mat.file') as TKey)} · {m.media?.original_name} · {fmtBytes(m.media?.size_bytes)}</p>
       </div>
       <Button size="sm" variant="secondary" loading={busy} onClick={async () => {
         setBusy(true)
         try { await openMedia(m.media_id!, m.media?.original_name || 'file', true) } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
-      }}><Download />Открыть</Button>
+      }}><Download />{t('common.open')}</Button>
     </div>
   )
 }
 
 function TestBlock({ m, pkg, courseId }: { m: Material; pkg: CoursePackage; courseId: number }) {
+  const tr = useT()
   const t = pkg.tests.find((x) => x.id === m.test_id)
-  if (!t) return <p className="rounded-xl bg-slate-50 p-3 text-sm text-muted">Тест пока не опубликован.</p>
+  if (!t) return <p className="rounded-xl bg-slate-50 p-3 text-sm text-muted">{tr('mat.testNotPublished')}</p>
   const total = Math.min(t.question_count || t.questions.length, t.questions.length)
   const passed = t.best_percent != null && t.best_percent >= t.pass_score
   return (
@@ -109,15 +113,15 @@ function TestBlock({ m, pkg, courseId }: { m: Material; pkg: CoursePackage; cour
         <div className="flex-1">
           <p className="font-semibold">{t.title}</p>
           <p className="mt-0.5 text-sm text-muted">
-            {total} вопр. · проходной балл {t.pass_score}%{t.time_limit_minutes ? ` · ${t.time_limit_minutes} мин` : ''}
-            {t.max_attempts ? ` · попыток: ${t.attempts_used}/${t.max_attempts}` : ''}
+            {tr('mat.testMeta', { n: total, score: t.pass_score })}{t.time_limit_minutes ? tr('mat.minutes', { n: t.time_limit_minutes }) : ''}
+            {t.max_attempts ? tr('mat.attempts', { used: t.attempts_used, max: t.max_attempts }) : ''}
           </p>
-          {t.best_percent != null && <Badge variant={passed ? 'green' : 'amber'} className="mt-2">Лучший результат: {Math.round(t.best_percent)}%</Badge>}
-          {t.pending_review > 0 && <Badge variant="amber" className="mt-2 ml-1">На проверке у методиста</Badge>}
+          {t.best_percent != null && <Badge variant={passed ? 'green' : 'amber'} className="mt-2">{tr('mat.best', { n: Math.round(t.best_percent) })}</Badge>}
+          {t.pending_review > 0 && <Badge variant="amber" className="mt-2 ml-1">{tr('mat.reviewPending')}</Badge>}
         </div>
       </div>
       <Button asChild className="mt-4 w-full sm:w-auto" data-testid="open-test">
-        <Link to={`/tests/${t.id}?course=${courseId}`}>{passed ? 'Пройти ещё раз' : t.best_percent != null ? 'Пересдать тест' : 'Начать тест'}</Link>
+        <Link to={`/tests/${t.id}?course=${courseId}`}>{passed ? tr('mat.retake') : t.best_percent != null ? tr('mat.retry') : tr('mat.startTest')}</Link>
       </Button>
     </div>
   )
@@ -128,6 +132,7 @@ export function MaterialView(props: {
   playingRef: React.MutableRefObject<boolean>; videoStart?: number
 }) {
   const { m, pkg, courseId } = props
+  const t = useT()
   const title = m.title && !['text'].includes(m.kind) ? <h3 className="mb-2 font-semibold">{m.title}</h3> : null
   switch (m.kind) {
     case 'text':
@@ -135,7 +140,7 @@ export function MaterialView(props: {
     case 'instruction':
       return (
         <div className="rounded-2xl border-l-4 border-brand-500 bg-brand-50/70 p-4">
-          <p className="mb-2 flex items-center gap-2 font-semibold text-brand-900"><Info className="h-4 w-4" />{m.title || 'Инструкция'}</p>
+          <p className="mb-2 flex items-center gap-2 font-semibold text-brand-900"><Info className="h-4 w-4" />{m.title || t('mat.instruction')}</p>
           <RichText text={m.body} />
         </div>
       )
@@ -151,14 +156,14 @@ export function MaterialView(props: {
       return (
         <a href={m.url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 hover:bg-slate-50">
           <div className="rounded-xl bg-sky-50 p-3 text-sky-700"><ExternalLink className="h-5 w-5" /></div>
-          <div className="min-w-0 flex-1"><p className="font-medium">{m.title || m.url}</p><p className="truncate text-xs text-muted">{m.url} · внешний ресурс (нужен интернет)</p></div>
+          <div className="min-w-0 flex-1"><p className="font-medium">{m.title || m.url}</p><p className="truncate text-xs text-muted">{m.url} · {t('mat.external')}</p></div>
         </a>
       )
     case 'test':
       return <TestBlock m={m} pkg={pkg} courseId={courseId} />
     case 'dialogue': {
       const d = pkg.dialogues.find((x) => x.id === m.dialogue_id)
-      return d ? <DialogueRunner scenario={d} /> : <p className="text-sm text-muted">Сценарий недоступен</p>
+      return d ? <DialogueRunner scenario={d} /> : <p className="text-sm text-muted">{t('mat.scenarioUnavailable')}</p>
     }
     default:
       return null

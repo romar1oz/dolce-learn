@@ -7,6 +7,7 @@ import * as TabsPrimitive from '@radix-ui/react-tabs'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/i18n'
 
 export const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:size-4 [&_svg]:shrink-0',
@@ -198,6 +199,7 @@ export const DialogClose = DialogPrimitive.Close
 export function DialogContent({ className, children, title, description, wide }: {
   className?: string; children: React.ReactNode; title: string; description?: string; wide?: boolean
 }) {
+  const t = useT()
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-[2px] data-[state=open]:animate-in" />
@@ -210,7 +212,7 @@ export function DialogContent({ className, children, title, description, wide }:
             {description ? <DialogPrimitive.Description className="mt-1 text-sm text-muted">{description}</DialogPrimitive.Description>
               : <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>}
           </div>
-          <DialogPrimitive.Close className="rounded-lg p-1.5 text-muted hover:bg-slate-100" aria-label="Закрыть"><X className="h-5 w-5" /></DialogPrimitive.Close>
+          <DialogPrimitive.Close className="rounded-lg p-1.5 text-muted hover:bg-slate-100" aria-label={t('common.close')}><X className="h-5 w-5" /></DialogPrimitive.Close>
         </div>
         {children}
       </DialogPrimitive.Content>
@@ -277,17 +279,19 @@ export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn('h-5 w-5 animate-spin text-brand-600', className)} />
 }
 
-export function LoadingBlock({ text = 'Загрузка…' }: { text?: string }) {
-  return <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted"><Spinner />{text}</div>
+export function LoadingBlock({ text }: { text?: string }) {
+  const t = useT()
+  return <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted"><Spinner />{text ?? t('common.loading')}</div>
 }
 
 export function ErrorBlock({ error, retry }: { error: unknown; retry?: () => void }) {
-  const msg = error instanceof Error ? error.message : 'Не удалось загрузить данные'
+  const t = useT()
+  const msg = error instanceof Error ? error.message : t('common.loadError')
   return (
     <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-      <p className="font-medium">Ошибка</p>
+      <p className="font-medium">{t('common.error')}</p>
       <p className="mt-1">{msg}</p>
-      {retry && <Button size="sm" variant="outline" className="mt-3" onClick={retry}>Повторить</Button>}
+      {retry && <Button size="sm" variant="outline" className="mt-3" onClick={retry}>{t('common.retry')}</Button>}
     </div>
   )
 }

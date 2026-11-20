@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { useT } from '@/i18n'
 
 /* Регистрация Service Worker и уведомление о новой версии приложения. */
 let updateSW: ((reload?: boolean) => Promise<void>) | null = null
@@ -22,6 +23,7 @@ export async function registerServiceWorker() {
 
 export function UpdatePrompt() {
   const [need, setNeed] = useState(false)
+  const t = useT()
   useEffect(() => {
     needRefreshListeners.push(setNeed)
     return () => { needRefreshListeners = needRefreshListeners.filter((l) => l !== setNeed) }
@@ -29,8 +31,8 @@ export function UpdatePrompt() {
   if (!need) return null
   return (
     <div className="fixed inset-x-4 bottom-24 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-brand-900 p-3 pl-4 text-sm text-white shadow-[var(--shadow-lift)] lg:bottom-6">
-      <span className="flex-1">Доступна новая версия Dolce Learn</span>
-      <Button size="sm" variant="accent" onClick={() => updateSW?.(true)}><RefreshCw />Обновить</Button>
+      <span className="flex-1">{t('common.newVersion')}</span>
+      <Button size="sm" variant="accent" onClick={() => updateSW?.(true)}><RefreshCw />{t('common.update')}</Button>
     </div>
   )
 }

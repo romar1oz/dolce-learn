@@ -3,69 +3,68 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, CloudOff, LogOut, Menu, RefreshCw, Wifi, WifiOff, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/stores/auth'
-import { useT } from '@/i18n'
+import { useT, type TKey } from '@/i18n'
 import { navFor } from './nav'
-import { cn, fmtRelative, initials, ROLE_LABEL } from '@/lib/utils'
+import { cn, fmtDate, fmtRelative, initials } from '@/lib/utils'
 import { Button, Dialog, DialogContent } from '@/components/ui'
 import { discardFailed, flush, retryFailed, useSync } from '@/offline/sync'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/offline/db'
 import { Logo } from '@/components/Logo'
 import { UpdatePrompt } from '@/components/UpdatePrompt'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export function SyncStatusDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const s = useSync()
   const uid = useAuth((x) => x.user?.id)
+  const t = useT()
   const failed = useLiveQuery(() => (uid ? db.queue.where({ userId: uid, status: 'failed' }).toArray() : []), [uid]) ?? []
-  const labels: Record<string, string> = {
-    heartbeat: 'Время обучения', lesson_open: 'Открытие урока', lesson_complete: 'Завершение урока',
-    video_progress: 'Просмотр видео', test_attempt: 'Попытка теста', dialogue_run: 'Тренажёр',
-    course_download: 'Скачивание курса', course_start: 'Начало курса',
-  }
+  const label = (type: string) => (['heartbeat', 'lesson_open', 'lesson_complete', 'video_progress', 'test_attempt', 'dialogue_run',
+    'course_download', 'course_start'].includes(type) ? t(`sync.ev.${type}` as TKey) : type)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Синхронизация" description="Данные обучения сохраняются на устройстве и отправляются на сервер автоматически.">
+      <DialogContent title={t('sync.title')} description={t('sync.description')}>
         <div className="space-y-3 text-sm">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-muted">Соединение</p>
-              <p className={cn('mt-1 font-semibold', s.online ? 'text-brand-800' : 'text-amber-700')}>{s.online ? 'В сети' : 'Нет сети'}</p>
+              <p className="text-xs text-muted">{t('sync.connection')}</p>
+              <p className={cn('mt-1 font-semibold', s.online ? 'text-brand-800' : 'text-amber-700')}>{s.online ? t('common.online') : t('common.noNetwork')}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-muted">Статус</p>
-              <p className="mt-1 font-semibold">{s.syncing ? 'Синхронизация…' : s.pending ? 'Ожидает отправки' : s.failed ? 'Есть ошибки' : 'Всё отправлено'}</p>
+              <p className="text-xs text-muted">{t('sync.status')}</p>
+              <p className="mt-1 font-semibold">{s.syncing ? t('sync.syncing') : s.pending ? t('sync.waiting') : s.failed ? t('sync.hasErrors') : t('sync.allSent')}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-muted">Ожидают отправки</p>
+              <p className="text-xs text-muted">{t('sync.pending')}</p>
               <p className="mt-1 text-xl font-bold" data-testid="pending-count">{s.pending}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-xs text-muted">Последняя синхронизация</p>
+              <p className="text-xs text-muted">{t('sync.last')}</p>
               <p className="mt-1 font-semibold">{fmtRelative(s.lastSyncAt)}</p>
             </div>
           </div>
           {s.lastError && <p className="rounded-xl bg-amber-50 p-3 text-amber-800">{s.lastError}</p>}
           {failed.length > 0 && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-              <p className="font-semibold text-red-700">Отклонено сервером: {failed.length}</p>
+              <p className="font-semibold text-red-700">{t('sync.rejected', { n: failed.length })}</p>
               <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-red-700">
-                {failed.slice(0, 20).map((f) => <li key={f.id}>• {labels[f.type] || f.type}: {f.error}</li>)}
+                {failed.slice(0, 20).map((f) => <li key={f.id}>• {label(f.type)}: {f.error}</li>)}
               </ul>
               <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => retryFailed()}>Повторить</Button>
-                <Button size="sm" variant="ghost" onClick={() => discardFailed()}>Очистить</Button>
+                <Button size="sm" variant="outline" onClick={() => retryFailed()}>{t('common.retry')}</Button>
+                <Button size="sm" variant="ghost" onClick={() => discardFailed()}>{t('common.clear')}</Button>
               </div>
             </div>
           )}
           <Button className="w-full" loading={s.syncing} disabled={!s.online}
                   onClick={async () => {
                     const r = await flush()
-                    if (r.networkError) toast.error('Сервер недоступен. Повторим автоматически.')
-                    else toast.success(r.sent ? `Отправлено событий: ${r.applied}` : 'Нечего отправлять — всё синхронизировано')
+                    if (r.networkError) toast.error(t('sync.serverDown'))
+                    else toast.success(r.sent ? t('sync.sent', { n: r.applied }) : t('sync.nothing'))
                   }}>
-            <RefreshCw /> Синхронизировать сейчас
+            <RefreshCw /> {t('sync.now')}
           </Button>
-          {!s.online && <p className="text-center text-xs text-muted">Синхронизация начнётся автоматически при появлении сети.</p>}
+          {!s.online && <p className="text-center text-xs text-muted">{t('sync.autoHint')}</p>}
         </div>
       </DialogContent>
     </Dialog>
@@ -74,6 +73,7 @@ export function SyncStatusDialog({ open, onOpenChange }: { open: boolean; onOpen
 
 function SyncButton({ compact }: { compact?: boolean }) {
   const s = useSync()
+  const t = useT()
   const [open, setOpen] = useState(false)
   const Icon = !s.online ? WifiOff : s.failed ? AlertTriangle : s.syncing ? RefreshCw : Wifi
   return (
@@ -84,7 +84,7 @@ function SyncButton({ compact }: { compact?: boolean }) {
                   : s.failed ? 'border-red-200 bg-red-50 text-red-700'
                   : 'border-brand-100 bg-brand-50 text-brand-900')}>
         <Icon className={cn('h-3.5 w-3.5', s.syncing && 'animate-spin')} />
-        {!compact && <span>{!s.online ? 'Офлайн' : s.syncing ? 'Синхронизация' : 'В сети'}</span>}
+        {!compact && <span className="max-sm:hidden">{!s.online ? t('common.offline') : s.syncing ? t('common.sync') : t('common.online')}</span>}
         {s.pending > 0 && <span className="rounded-full bg-white/80 px-1.5 font-semibold" data-testid="pending-badge">{s.pending}</span>}
       </button>
       <SyncStatusDialog open={open} onOpenChange={setOpen} />
@@ -105,7 +105,7 @@ export function AppLayout() {
   const immersive = /^\/learn\/|^\/tests\/\d+$/.test(loc.pathname)
 
   const doLogout = async () => {
-    if (pending > 0 && !confirm(`Есть несинхронизированные данные (${pending}). Они сохранятся на устройстве и отправятся при следующем входе. Выйти?`)) return
+    if (pending > 0 && !confirm(t('layout.logoutConfirm', { n: pending }))) return
     await logout()
     navigate('/login')
   }
@@ -114,7 +114,7 @@ export function AppLayout() {
     <nav className="space-y-5">
       {nav.map((g, gi) => (
         <div key={gi}>
-          {g.title && <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider text-brand-200/70 uppercase">{g.title}</p>}
+          {g.title && <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wider text-brand-200/70 uppercase">{t(g.title)}</p>}
           <div className="space-y-0.5">
             {g.items.map((i) => (
               <NavLink key={i.to} to={i.to} end={i.end} onClick={onItem}
@@ -140,7 +140,7 @@ export function AppLayout() {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">{initials(user!.full_name)}</div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{user!.full_name}</p>
-              <p className="truncate text-xs text-brand-100/70">{ROLE_LABEL[user!.role]}</p>
+              <p className="truncate text-xs text-brand-100/70">{t(`role.${user!.role}` as TKey)}</p>
             </div>
             <button onClick={doLogout} className="rounded-lg p-2 text-brand-100/80 hover:bg-white/10 hover:text-white" title={t('common.logout')} aria-label={t('common.logout')}>
               <LogOut className="h-4 w-4" />
@@ -157,15 +157,16 @@ export function AppLayout() {
             {user!.department_name && <span>{user!.department_name}</span>}
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher className="max-sm:hidden" />
             <SyncButton />
-            <button className="rounded-xl p-2 hover:bg-slate-100 lg:hidden" onClick={() => setSheet(true)} aria-label="Меню"><Menu className="h-5 w-5" /></button>
+            <button className="rounded-xl p-2 hover:bg-slate-100 lg:hidden" onClick={() => setSheet(true)} aria-label={t('common.menu')}><Menu className="h-5 w-5" /></button>
           </div>
         </div>
         {status === 'offline' && (
           <div className="flex items-center justify-center gap-2 bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-800">
             <CloudOff className="h-3.5 w-3.5 shrink-0" />
-            Офлайн-режим: доступны скачанные курсы. Результаты будут подтверждены сервером после синхронизации.
-            {offlineExpiresAt && <span className="hidden sm:inline">Офлайн-сессия до {new Date(offlineExpiresAt).toLocaleDateString('ru-RU')}.</span>}
+            {t('layout.offlineBanner')}
+            {offlineExpiresAt && <span className="hidden sm:inline">{t('layout.offlineUntil', { date: fmtDate(new Date(offlineExpiresAt)) })}</span>}
           </div>
         )}
       </header>
@@ -201,11 +202,12 @@ export function AppLayout() {
           <div className="safe-bottom absolute inset-y-0 right-0 flex w-[86%] max-w-sm flex-col bg-brand-900 p-5">
             <div className="mb-6 flex items-center justify-between">
               <Logo dark />
-              <button onClick={() => setSheet(false)} className="rounded-lg p-2 text-white/80 hover:bg-white/10" aria-label="Закрыть"><X className="h-5 w-5" /></button>
+              <button onClick={() => setSheet(false)} className="rounded-lg p-2 text-white/80 hover:bg-white/10" aria-label={t('common.close')}><X className="h-5 w-5" /></button>
             </div>
+            <LanguageSwitcher dark className="mb-4 self-start" />
             <div className="mb-5 rounded-2xl bg-white/8 p-3 text-white">
               <p className="font-semibold">{user!.full_name}</p>
-              <p className="text-xs text-brand-100/70">{ROLE_LABEL[user!.role]}{user!.department_name ? ` · ${user!.department_name}` : ''}</p>
+              <p className="text-xs text-brand-100/70">{t(`role.${user!.role}` as TKey)}{user!.department_name ? ` · ${user!.department_name}` : ''}</p>
             </div>
             <div className="flex-1 overflow-y-auto"><NavList onItem={() => setSheet(false)} /></div>
             <Button variant="secondary" className="mt-4" onClick={doLogout}><LogOut />{t('common.logout')}</Button>

@@ -6,10 +6,12 @@ import { api } from '@/lib/api'
 import { useOfflineQuery } from '@/hooks/useOffline'
 import { Badge, Button, Card, EmptyState, PageHeader, Skeleton, Textarea } from '@/components/ui'
 import { cn, fmtDate } from '@/lib/utils'
+import { useT, type TKey } from '@/i18n'
 
 export default function MyAssessments() {
   const q = useOfflineQuery(['my-assessments'], () => api.get<any[]>('/api/competencies/assessments'))
   const qc = useQueryClient()
+  const t = useT()
   const list = (q.data?.data || []).filter((a) => a.my)
   const [open, setOpen] = useState<number | null>(null)
   const [scores, setScores] = useState<Record<number, number>>({})
@@ -18,8 +20,8 @@ export default function MyAssessments() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Оценка компетенций 180/360" subtitle="Оцените компетенции по шкале — ответы коллег анонимизируются в сводном отчёте" />
-      {q.isLoading ? <Skeleton className="h-40" /> : list.length === 0 ? <EmptyState icon={Target} title="Нет назначенных оценок" />
+      <PageHeader title={t('ass.title')} subtitle={t('ass.subtitle')} />
+      {q.isLoading ? <Skeleton className="h-40" /> : list.length === 0 ? <EmptyState icon={Target} title={t('ass.empty')} />
         : list.map((a) => {
           const isOpen = open === a.id
           const done = !!a.my.submitted_at
@@ -29,12 +31,12 @@ export default function MyAssessments() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold">{a.title}</p>
-                  <p className="text-sm text-muted">Оцениваемый: {a.subject_name} · ваша роль: {a.reviewers.find((r: any) => r.user_id && r.relation === a.my.relation)?.relation_label}</p>
-                  {a.due_date && <p className="text-xs text-muted">Срок: {fmtDate(a.due_date)}</p>}
+                  <p className="text-sm text-muted">{t('ass.subject', { name: a.subject_name })} · {t('ass.role', { role: t(`ass.rel.${a.my.relation}` as TKey) })}</p>
+                  {a.due_date && <p className="text-xs text-muted">{t('ass.due', { date: fmtDate(a.due_date) })}</p>}
                 </div>
-                {done ? <Badge variant="green"><CheckCircle2 className="h-3 w-3" />Отправлено</Badge>
-                  : a.status !== 'active' ? <Badge>Закрыто</Badge>
-                  : <Button size="sm" onClick={() => { setOpen(isOpen ? null : a.id); setScores({}); setComment('') }}>{isOpen ? 'Свернуть' : 'Оценить'}</Button>}
+                {done ? <Badge variant="green"><CheckCircle2 className="h-3 w-3" />{t('ass.sent')}</Badge>
+                  : a.status !== 'active' ? <Badge>{t('common.closed')}</Badge>
+                  : <Button size="sm" onClick={() => { setOpen(isOpen ? null : a.id); setScores({}); setComment('') }}>{isOpen ? t('common.collapse') : t('ass.rate')}</Button>}
               </div>
               {isOpen && !done && (
                 <div className="mt-5 space-y-4">
@@ -53,17 +55,17 @@ export default function MyAssessments() {
                     </div>
                   ))}
                   {a.scale_labels && <p className="text-xs text-muted">{Object.entries(a.scale_labels).map(([k, v]) => `${k} — ${v}`).join('; ')}</p>}
-                  <Textarea placeholder="Комментарий (необязательно)" value={comment} onChange={(e) => setComment(e.target.value)} />
+                  <Textarea placeholder={t('ass.comment')} value={comment} onChange={(e) => setComment(e.target.value)} />
                   <Button loading={busy} disabled={Object.keys(scores).length !== qs.length} onClick={async () => {
                     setBusy(true)
                     try {
                       await api.post(`/api/competencies/assessments/${a.id}/submit`, {
                         scores: Object.entries(scores).map(([qid, score]) => ({ question_id: Number(qid), score })), comment })
-                      toast.success('Оценка отправлена')
+                      toast.success(t('ass.submitted'))
                       setOpen(null)
                       qc.invalidateQueries({ queryKey: ['my-assessments'] })
                     } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }
-                  }}>Отправить оценку ({Object.keys(scores).length}/{qs.length})</Button>
+                  }}>{t('ass.submit', { done: Object.keys(scores).length, total: qs.length })}</Button>
                 </div>
               )}
             </Card>
