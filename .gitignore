@@ -19,3 +19,4 @@ frontend/e2e-result.png
 .certs/
 frontend/public/dolce-local-ca.crt
 demo-videos/
+*.tsbuildinfo
