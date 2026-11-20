@@ -50,7 +50,7 @@ extendedKeyUsage=serverAuth
 subjectAltName=$SAN
 EOF
 # iOS принимает сертификаты сервера сроком не более 825 дней
-openssl x509 -req -in "$DIR/server.csr" -CA "$DIR/ca.crt" -CAkey "$DIR/ca.key" -CAcreateserial \
+openssl x509 -req -in "$DIR/server.csr" -CA "$DIR/ca.crt" -CAkey "$DIR/ca.key" -CAserial "$DIR/ca.srl" -CAcreateserial \
   -days 825 -sha256 -extfile "$DIR/server.ext" -out "$DIR/server.crt" 2>/dev/null
 rm -f "$DIR/server.csr"
 openssl verify -CAfile "$DIR/ca.crt" "$DIR/server.crt" >/dev/null
