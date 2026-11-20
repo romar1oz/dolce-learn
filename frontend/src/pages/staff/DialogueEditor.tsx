@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ArrowLeft, Flag, Play, Plus, Save, Trash2, X } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -20,6 +20,7 @@ export default function DialogueEditor() {
   const q = useQuery({ queryKey: ['dialogue-edit', id], enabled: !isNew, queryFn: () => api.get<Scn>(`/api/dialogues/${id}/edit`) })
   const [s, setS] = useState<Scn | null>(null)
   const [busy, setBusy] = useState(false)
+  const qc = useQueryClient()
   useEffect(() => {
     if (isNew) {
       const k = uuid().slice(0, 8)
@@ -38,6 +39,7 @@ export default function DialogueEditor() {
     try {
       const r: any = isNew ? await api.post('/api/dialogues', s) : await api.put(`/api/dialogues/${id}`, s)
       if (r.warning) toast.warning(r.warning); else toast.success('Сценарий сохранён')
+      qc.invalidateQueries({ queryKey: ['dialogues'] })
       if (isNew) navigate(`/admin/dialogues/${r.id}`, { replace: true })
       else setS(r)
     } catch (e: any) { toast.error(e.message) } finally { setBusy(false) }

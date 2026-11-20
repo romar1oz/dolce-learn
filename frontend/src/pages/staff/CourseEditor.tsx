@@ -62,8 +62,8 @@ function MaterialDialog({ open, onOpenChange, lessonId, material, courseId, onSa
   const [testId, setTestId] = useState(material?.test_id ? String(material.test_id) : '')
   const [dialogueId, setDialogueId] = useState(material?.dialogue_id ? String(material.dialogue_id) : '')
   const [busy, setBusy] = useState(false)
-  const tests = useQuery({ queryKey: ['staff-tests'], queryFn: () => api.get<any[]>('/api/tests'), enabled: open && kind === 'test' })
-  const dialogues = useQuery({ queryKey: ['dialogues'], queryFn: () => api.get<any[]>('/api/dialogues'), enabled: open && kind === 'dialogue' })
+  const tests = useQuery({ queryKey: ['staff-tests'], queryFn: () => api.get<any[]>('/api/tests'), enabled: open && kind === 'test', staleTime: 0, refetchOnMount: 'always' })
+  const dialogues = useQuery({ queryKey: ['dialogues'], queryFn: () => api.get<any[]>('/api/dialogues'), enabled: open && kind === 'dialogue', staleTime: 0, refetchOnMount: 'always' })
   useEffect(() => {
     if (open) {
       setKind(material?.kind ?? null); setTitle(material?.title ?? ''); setBody(material?.body ?? ''); setUrl(material?.url ?? '')
@@ -161,7 +161,7 @@ function LessonRow({ lesson, idx, total, courseId, modules, refresh, defaultOpen
     refresh()
   }
   return (
-    <div className="rounded-2xl border border-line bg-white">
+    <div className="rounded-2xl border border-line bg-white" data-testid="lesson-row">
       <div className="flex items-center gap-2 p-2.5">
         <button onClick={() => setOpen(!open)} className="rounded-lg p-1 hover:bg-slate-100" aria-label="Развернуть">{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
         {rename ? (

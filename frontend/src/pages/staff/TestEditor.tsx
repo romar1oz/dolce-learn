@@ -115,6 +115,7 @@ export default function TestEditor() {
       })
       toast.success(status === 'published' ? 'Тест опубликован' : 'Настройки сохранены')
       refresh()
+      qc.invalidateQueries({ queryKey: ['staff-tests'] })
     } catch (e: any) { toast.error(e.message) } finally { setSaving(false) }
   }
   const qs: any[] = t.data.questions

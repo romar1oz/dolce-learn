@@ -7,6 +7,15 @@ import { caption, DEMO_COURSE, DEMO_QUESTIONS, installOverlay, login, pause, scr
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const ASSETS = path.join(ROOT, 'backend/app/assets/demo')
 
+/** Раскрывает урок (если свёрнут) и возвращает кнопку «Добавить элемент» именно этого урока. */
+async function lessonAddButton(page: import('@playwright/test').Page, title: RegExp) {
+  const row = page.getByTestId('lesson-row').filter({ has: page.getByRole('button', { name: title }) })
+  const add = row.getByTestId('add-block')
+  if (!(await add.isVisible())) await row.getByRole('button', { name: title }).click()
+  await add.waitFor()
+  return add
+}
+
 test.use({ viewport: { width: 1440, height: 900 }, video: { mode: 'on', size: { width: 1440, height: 900 } } })
 
 test('Методист: создание курса, теста, назначение, аналитика и документы', async ({ page, context }) => {
@@ -47,8 +56,7 @@ test('Методист: создание курса, теста, назначе�
   }
 
   // видео
-  await page.getByRole('button', { name: /^1\. Видео: средства защиты/ }).click()
-  await page.getByTestId('add-block').first().click()
+  await (await lessonAddButton(page, /^1\. Видео: средства защиты/)).click()
   await caption(page, 'Добавляем видео: MP4/WebM/MOV, прогресс загрузки, автоматическая длительность и кадр-превью', 2500)
   await page.getByTestId('block-video').click()
   await page.getByTestId('file-input-video').setInputFiles(path.join(ASSETS, 'demo_test_video.mp4'))
@@ -60,8 +68,7 @@ test('Методист: создание курса, теста, назначе�
   await pause(page)
 
   // PDF + инструкция
-  await page.getByRole('button', { name: /^2\. Инструкция по ТБ/ }).click()
-  await page.getByTestId('add-block').nth(1).click()
+  await (await lessonAddButton(page, /^2\. Инструкция по ТБ/)).click()
   await caption(page, 'PDF-инструкция: файл проверяется по содержимому, хранится на локальном сервере', 2200)
   await page.getByTestId('block-pdf').click()
   await page.getByTestId('file-input-pdf').setInputFiles({ name: 'instrukciya_tb.pdf', mimeType: 'application/pdf',
@@ -70,7 +77,7 @@ test('Методист: создание курса, теста, назначе�
   await expect(page.getByText(/instrukciya_tb\.pdf ·/)).toBeVisible({ timeout: 30_000 })
   await page.getByTestId('save-block').click()
   await pause(page)
-  await page.getByTestId('add-block').nth(1).click()
+  await (await lessonAddButton(page, /^2\. Инструкция по ТБ/)).click()
   await page.getByTestId('block-instruction').click()
   await page.getByTestId('block-body').pressSequentially('1. Перед сменой проверьте СИЗ.\n2. Не снимайте защитные ограждения.\n3. При аварии нажмите красную кнопку.', { delay: 8 })
   await page.getByTestId('save-block').click()
@@ -108,8 +115,7 @@ test('Методист: создание курса, теста, назначе�
   // ---------- Тест в курс, публикация ----------
   await page.getByRole('link', { name: 'Мои курсы' }).click()
   await page.getByText(DEMO_COURSE).first().click()
-  await page.getByRole('button', { name: /^3\. Итоговый тест/ }).click()
-  await page.getByTestId('add-block').first().click()
+  await (await lessonAddButton(page, /^3\. Итоговый тест/)).click()
   await page.getByTestId('block-test').click()
   const testOpt = await page.locator('[role=dialog] select option', { hasText: 'Итоговый тест: техника безопасности' }).getAttribute('value')
   await page.locator('[role=dialog] select').selectOption(testOpt!)

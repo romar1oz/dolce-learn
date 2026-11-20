@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ListChecks, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -10,6 +10,7 @@ import type { CourseSummary, Page } from '@/types'
 
 export default function StaffTests() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const tests = useQuery({ queryKey: ['staff-tests'], queryFn: () => api.get<any[]>('/api/tests') })
   const courses = useQuery({ queryKey: ['staff-courses-all'], queryFn: () => api.get<Page<CourseSummary>>('/api/courses', { page_size: 200 }) })
   const [open, setOpen] = useState(false)
@@ -49,6 +50,7 @@ export default function StaffTests() {
             setBusy(true)
             try {
               const t = await api.post<any>('/api/tests', { title, course_id: courseId ? Number(courseId) : null })
+              qc.invalidateQueries({ queryKey: ['staff-tests'] })
               navigate(`/admin/tests/${t.id}`)
             } catch (er: any) { toast.error(er.message) } finally { setBusy(false) }
           }}>

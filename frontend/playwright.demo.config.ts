@@ -14,5 +14,7 @@ export default defineConfig({
     serviceWorkers: 'allow',
     locale: 'ru-RU',
     launchOptions: { slowMo: 120 },
+    actionTimeout: 30_000,
+    trace: 'retain-on-failure',
   },
 })

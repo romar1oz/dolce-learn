@@ -2,7 +2,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { caption, DEMO_COURSE, DEMO_QUESTIONS, installOverlay, login, pause, scrollThrough } from './helpers'
 
-test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: false,
+test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
            video: { mode: 'on', size: { width: 390, height: 844 } } })
 
 async function answerAll(page: Page) {
@@ -49,7 +49,7 @@ test('Сотрудник: скачивание курса, обучение бе
   await scrollThrough(page, 1200, 8)
   await page.mouse.wheel(0, -3000)
 
-  await page.getByRole('link', { name: 'Мои курсы' }).first().click()
+  await page.locator('nav.fixed.bottom-0').getByRole('link', { name: 'Мои курсы' }).click()
   await caption(page, 'Назначенный методистом курс уже здесь', 2200)
   await page.getByText(DEMO_COURSE, { exact: true }).first().click()
   await caption(page, 'Страница курса: программа, прогресс и кнопка скачивания с размером', 2500)
@@ -104,25 +104,25 @@ test('Сотрудник: скачивание курса, обучение бе
   await scrollThrough(page, 1400, 8)
   await caption(page, 'Разбор ответов с правильными вариантами — только после завершения попытки', 2500)
 
-  await page.getByRole('button', { name: 'Ещё' }).click()
-  await page.getByRole('link', { name: 'Сертификаты' }).click()
+  await page.locator('nav.fixed.bottom-0').getByRole('button', { name: 'Ещё' }).click()
+  await page.locator('div.fixed.inset-0.z-40').getByRole('link', { name: 'Сертификаты' }).click()
   await caption(page, 'PDF-сертификат выдан автоматически после завершения курса', 3000)
-  await page.getByRole('button', { name: 'Ещё' }).click()
-  await page.getByRole('link', { name: 'Мои результаты' }).click()
+  await page.locator('nav.fixed.bottom-0').getByRole('button', { name: 'Ещё' }).click()
+  await page.locator('div.fixed.inset-0.z-40').getByRole('link', { name: 'Мои результаты' }).click()
   await caption(page, 'История попыток и средний балл', 2500)
-  await page.getByRole('button', { name: 'Ещё' }).click()
-  await page.getByRole('link', { name: 'Офлайн-доступ' }).click()
+  await page.locator('nav.fixed.bottom-0').getByRole('button', { name: 'Ещё' }).click()
+  await page.locator('div.fixed.inset-0.z-40').getByRole('link', { name: 'Офлайн-доступ' }).click()
   await caption(page, 'Управление памятью: скачанные курсы, занятое место, удаление с устройства', 3000)
-  await page.getByRole('link', { name: 'Библиотека' }).first().click()
+  await page.locator('nav.fixed.bottom-0').getByRole('link', { name: 'Библиотека' }).click()
   await caption(page, 'Библиотека документов — файлы можно сохранить для офлайн-доступа', 2800)
   const sheet = page.locator('div.fixed.inset-0.z-40')
-  await page.getByRole('button', { name: 'Ещё' }).click()
+  await page.locator('nav.fixed.bottom-0').getByRole('button', { name: 'Ещё' }).click()
   await caption(page, 'Смена языка — в меню', 1200)
   await sheet.locator('[data-lang=kk]').click()
   await pause(page, 1500)
   await sheet.getByRole('link', { name: 'Басты бет' }).click()
   await caption(page, 'Қазақша интерфейс — выбор языка сохраняется в профиле', 3500)
-  await page.getByRole('button', { name: 'Тағы' }).click()
+  await page.locator('nav.fixed.bottom-0').getByRole('button', { name: 'Тағы' }).click()
   await sheet.locator('[data-lang=ru]').click()
   await sheet.getByRole('link', { name: 'Главная' }).click()
   await caption(page, 'Dolce Learn: обучение и аттестация персонала — даже без интернета', 3500)
