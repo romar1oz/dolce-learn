@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand-950: #04382b;
+  --color-brand-900: #064e3b;
+  --color-brand-800: #065f46;
+  --color-brand-600: #059669;
+  --color-brand-500: #10b981;
+  --color-brand-200: #a7f3d0;
+  --color-brand-100: #d1fae5;
+  --color-brand-50: #ecfdf5;
+  --color-page: #f8fafc;
+  --color-ink: #111827;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --radius-card: 16px;
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 32px -8px rgb(15 23 42 / 0.16);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-page text-ink antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-[var(--radius-card)] border border-line/70 bg-white shadow-[var(--shadow-soft)];
+  }
+  .prose-lite p {
+    @apply mb-3 leading-relaxed;
+  }
+  .prose-lite ul {
+    @apply mb-3 list-disc space-y-1 pl-5;
+  }
+  .prose-lite ol {
+    @apply mb-3 list-decimal space-y-1 pl-5;
+  }
+  .prose-lite strong {
+    @apply font-semibold text-ink;
+  }
+  .prose-lite h3 {
+    @apply mt-4 mb-2 text-base font-semibold;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

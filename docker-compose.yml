@@ -1,0 +1,44 @@
+# Dolce Learn: PostgreSQL + FastAPI + PWA (nginx).  Запуск: docker compose up --build  →  http://localhost:8080
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dolce_learn
+      POSTGRES_USER: dolce
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dolce_dev_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dolce -d dolce_learn"]
+      interval: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://dolce:${POSTGRES_PASSWORD:-dolce_dev_password}@db:5432/dolce_learn
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please-use-openssl-rand-hex-32}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-DolceDemo2026!}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-1024}
+    volumes:
+      - storage:/data/storage
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  storage:

@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==9.2.0
+httpx==0.28.1
+# генерация демо-ассетов (scripts/make_demo_assets.py)
+pillow==13.0.0
+imageio-ffmpeg==0.8.1
