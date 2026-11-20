@@ -2,6 +2,7 @@
 # Локальный запуск без Docker: PostgreSQL (порт 5433) + миграции + seed + backend :8000 + frontend.
 #   ./scripts/dev.sh          — PWA-сборка (vite preview, Service Worker включён)  → http://localhost:4173
 #   ./scripts/dev.sh --hot    — режим разработки с hot reload (Service Worker выключен) → http://localhost:5173
+#   ./scripts/dev.sh --https  — PWA по HTTPS для телефонов в локальной сети → https://<IP-компьютера>:4443
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$ROOT/.tools/node/bin:$PATH"
@@ -39,6 +40,16 @@ trap 'kill $BACK 2>/dev/null' EXIT
 cd "$ROOT/frontend"
 if [ "${1:-}" = "--hot" ]; then
   npx vite --port 5173
+elif [ "${1:-}" = "--https" ]; then
+  # сертификат перевыпускается, если сменился IP-адрес в сети (или его ещё нет)
+  NEED=0
+  [ -f "$ROOT/.certs/server.crt" ] || NEED=1
+  for ip in $(ifconfig | awk '/inet / && $2 != "127.0.0.1" {print $2}'); do
+    [ "$NEED" = 1 ] && break
+    openssl x509 -in "$ROOT/.certs/server.crt" -noout -text | grep -q "IP Address:$ip\b" || NEED=1
+  done
+  [ "$NEED" = 1 ] && "$ROOT/scripts/https-setup.sh"
+  npx vite build && DOLCE_HTTPS=1 npx vite preview --port 4443 --strictPort
 else
   npx vite build && npx vite preview --port 4173
 fi

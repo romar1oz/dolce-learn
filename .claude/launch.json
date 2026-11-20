@@ -4,20 +4,39 @@
     {
       "name": "backend",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "cd /Users/roma/Desktop/Dolce-Learn/backend && exec /Users/roma/Desktop/Dolce-Learn/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/roma/Desktop/Dolce-Learn/backend && exec /Users/roma/Desktop/Dolce-Learn/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      ],
       "port": 8000
     },
     {
       "name": "frontend-pwa",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "cd /Users/roma/Desktop/Dolce-Learn/frontend && exec /Users/roma/Desktop/Dolce-Learn/.tools/node/bin/node node_modules/vite/bin/vite.js preview --port 4173 --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/roma/Desktop/Dolce-Learn/frontend && exec /Users/roma/Desktop/Dolce-Learn/.tools/node/bin/node node_modules/vite/bin/vite.js preview --port 4173 --strictPort"
+      ],
       "port": 4173
     },
     {
       "name": "frontend-dev",
       "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "cd /Users/roma/Desktop/Dolce-Learn/frontend && exec /Users/roma/Desktop/Dolce-Learn/.tools/node/bin/node node_modules/vite/bin/vite.js --port 5173 --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/roma/Desktop/Dolce-Learn/frontend && exec /Users/roma/Desktop/Dolce-Learn/.tools/node/bin/node node_modules/vite/bin/vite.js --port 5173 --strictPort"
+      ],
       "port": 5173
+    },
+    {
+      "name": "frontend-https",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/roma/Desktop/Dolce-Learn/frontend && DOLCE_HTTPS=1 exec /Users/roma/Desktop/Dolce-Learn/.tools/node/bin/node node_modules/vite/bin/vite.js preview --port 4443 --strictPort"
+      ],
+      "port": 4443,
+      "url": "https://localhost:4443"
     }
   ]
 }

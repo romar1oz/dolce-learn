@@ -25,6 +25,9 @@ docker compose up -d --build
 Service Worker и установка PWA работают только по HTTPS (исключение — `http://localhost`).
 Варианты:
 
+**0. Пилот с компьютера разработчика** — `./scripts/dev.sh --https` и локальный CA, см. `MOBILE_HTTPS.md`.
+
+
 **A. Корпоративный сертификат** — поставьте TLS-терминатор (nginx/Caddy/балансировщик) перед контейнером `frontend`
 и проксируйте на порт 8080.
 
